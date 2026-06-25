@@ -421,23 +421,19 @@ textarea.form-control { resize: vertical; min-height: 72px; }
         <input class="form-control" id="pos-search" placeholder="搜尋機號、櫃號、IP…" oninput="renderPOS()">
         <select class="form-control" id="pos-floor-filter" onchange="renderPOS()">
           <option value="">全部樓層</option>
-          <option>B1</option><option>01</option><option>02</option><option>03</option>
+          <option>B2</option><option>B1</option>
+          <option>01</option><option>02</option><option>03</option>
           <option>04</option><option>05</option><option>06</option>
-          <option>35</option><option>85</option><option>86</option><option>87</option><option>88</option><option>89</option>
+          <option>35</option><option>85</option><option>86</option>
+          <option>88</option><option>89</option><option>91</option>
           <option>Office</option><option>觀景台</option>
         </select>
         <select class="form-control" id="pos-status-filter" onchange="renderPOS()">
           <option value="">全部狀態</option>
-          <option value="使用中">使用中</option>
-          <option value="庫存">庫存</option>
-          <option value="備機">備機</option>
-          <option value="維修中">維修中</option>
-          <option value="待報廢">待報廢</option>
-          <option value="已報廢">已報廢</option>
+          <option value="啟用">啟用</option>
           <option value="停用">停用</option>
-          <option value="遺失">遺失</option>
-          <option value="調撥中">調撥中</option>
-          <option value="驗收中">驗收中</option>
+          <option value="虛擬">虛擬</option>
+          <option value="EC虛擬">EC虛擬</option>
         </select>
         <button class="btn btn-primary" onclick="openModal('pos')">＋ 新增POS</button>
       </div>
@@ -685,73 +681,132 @@ textarea.form-control { resize: vertical; min-height: 72px; }
     <div class="modal-body">
       <div class="form-grid form-grid-2" style="gap:14px">
         <div class="form-section-title">基本資訊</div>
+
+        <!-- 機號：6字元，第一碼大寫英文 -->
         <div class="form-group">
           <label class="form-label required">機號</label>
-          <input class="form-control" id="pos-machine_no" placeholder="例：POS-001">
+          <input class="form-control" id="pos-machine_no"
+            maxlength="6"
+            placeholder="例：A00001"
+            oninput="formatCodeInput(this,6)"
+            style="text-transform:uppercase;letter-spacing:0.06em">
+          <span class="form-hint">6字元；首碼須為英文字母（自動轉大寫）</span>
         </div>
+
+        <!-- 機型：下拉選單 -->
         <div class="form-group">
           <label class="form-label required">機型</label>
-          <input class="form-control" id="pos-model" placeholder="例：CASIO V-R7100">
+          <select class="form-control" id="pos-model">
+            <option value="">請選擇</option>
+            <option value="9635">9635</option>
+            <option value="大黑">大黑</option>
+            <option value="mPOS">mPOS</option>
+            <option value="安卓">安卓</option>
+          </select>
         </div>
+
+        <!-- 樓層：加 B2、91，移除 87 -->
         <div class="form-group">
           <label class="form-label required">樓層</label>
           <select class="form-control" id="pos-floor">
             <option value="">請選擇</option>
-            <option>B1</option><option>01</option><option>02</option><option>03</option>
+            <option>B2</option><option>B1</option>
+            <option>01</option><option>02</option><option>03</option>
             <option>04</option><option>05</option><option>06</option>
-            <option>35</option><option>85</option><option>86</option>
-            <option>87</option><option>88</option><option>89</option>
+            <option>35</option>
+            <option>85</option><option>86</option>
+            <option>88</option><option>89</option><option>91</option>
             <option>Office</option><option>觀景台</option>
           </select>
         </div>
+
+        <!-- 櫃號：5字元，第一碼大寫英文 -->
         <div class="form-group">
           <label class="form-label">櫃號</label>
-          <input class="form-control" id="pos-booth_no" placeholder="例：B101">
+          <input class="form-control" id="pos-booth_no"
+            maxlength="5"
+            placeholder="例：A0101"
+            oninput="formatCodeInput(this,5)"
+            style="text-transform:uppercase;letter-spacing:0.06em">
+          <span class="form-hint">5字元；首碼須為英文字母（自動轉大寫）</span>
         </div>
+
+        <!-- 櫃名：最多 40 字元 -->
         <div class="form-group">
           <label class="form-label">櫃名</label>
-          <input class="form-control" id="pos-booth_name" placeholder="例：UNIQLO">
+          <input class="form-control" id="pos-booth_name"
+            maxlength="40"
+            placeholder="例：UNIQLO">
+          <span class="form-hint">最多 40 字元</span>
         </div>
+
+        <!-- IP位址：接受如 20.135 格式 -->
         <div class="form-group">
-          <label class="form-label required">IP位址</label>
-          <input class="form-control" id="pos-ip_addr" placeholder="例：192.168.1.101">
+          <label class="form-label">IP位址</label>
+          <input class="form-control" id="pos-ip_addr"
+            placeholder="例：20.135"
+            oninput="formatIPInput(this)"
+            inputmode="decimal"
+            maxlength="20">
+          <span class="form-hint">僅輸入數字與小數點，例：20.135</span>
         </div>
+
         <div class="form-section-title">狀態與設定</div>
+
+        <!-- 狀態：啟用、停用、虛擬、EC虛擬 -->
         <div class="form-group">
           <label class="form-label required">狀態</label>
           <select class="form-control" id="pos-status">
-            <option>使用中</option><option>庫存</option><option>備機</option>
-            <option>維修中</option><option>停用</option><option>待報廢</option>
-            <option>已報廢</option><option>遺失</option><option>調撥中</option><option>驗收中</option>
+            <option value="啟用">啟用</option>
+            <option value="停用">停用</option>
+            <option value="虛擬">虛擬</option>
+            <option value="EC虛擬">EC虛擬</option>
           </select>
         </div>
+
+        <!-- 是否為特櫃：新增 -->
         <div class="form-group">
-          <label class="form-label">POS類型</label>
-          <select class="form-control" id="pos-pos_type">
-            <option>一般收銀</option><option>統收</option><option>餐飲</option><option>其他</option>
+          <label class="form-label">是否為特櫃 <span style="font-size:11px;color:var(--text-muted)">(非使用101POS)</span></label>
+          <select class="form-control" id="pos-is_special_counter">
+            <option value="false">否</option>
+            <option value="true">是</option>
           </select>
         </div>
+
+        <!-- 電話（原POS類型） -->
+        <div class="form-group">
+          <label class="form-label">電話</label>
+          <input class="form-control" id="pos-pos_type"
+            placeholder="例：02-8101-8101"
+            inputmode="tel"
+            maxlength="20">
+        </div>
+
+        <!-- 是否統收 -->
+        <div class="form-group">
+          <label class="form-label">是否統收</label>
+          <select class="form-control" id="pos-is_central_collect">
+            <option value="false">否</option>
+            <option value="true">是</option>
+          </select>
+        </div>
+
+        <!-- 起始日期 -->
         <div class="form-group">
           <label class="form-label">起始日期</label>
           <input class="form-control" type="date" id="pos-start_date">
         </div>
+
+        <!-- 終止日期 -->
         <div class="form-group">
           <label class="form-label">終止日期</label>
           <input class="form-control" type="date" id="pos-end_date">
         </div>
-        <div class="form-group">
-          <label class="form-label">是否統收</label>
-          <select class="form-control" id="pos-is_central_collect">
-            <option value="false">否</option><option value="true">是</option>
-          </select>
-        </div>
+
+        <!-- 備註 -->
         <div class="form-group" style="grid-column:1/-1">
           <label class="form-label">備註</label>
           <textarea class="form-control" id="pos-remark" placeholder="備註說明…"></textarea>
-        </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label required">異動原因</label>
-          <input class="form-control" id="pos-change_reason" placeholder="請說明新增/異動原因">
         </div>
       </div>
     </div>
@@ -1047,6 +1102,29 @@ function lsUpdate(key, id, updates) {
 function lsDelete(key, id) {
   lsSet(key, lsGet(key).filter(r => r.id !== id));
 }
+
+// ── Input Format Helpers ──
+// 機號/櫃號：首碼必須為英文字母（大寫），其餘不限
+window.formatCodeInput = function(el, maxLen) {
+  let v = el.value.toUpperCase();
+  // 移除非字母數字以外的字元
+  v = v.replace(/[^A-Z0-9]/g, '');
+  // 強制首碼為英文字母
+  if (v.length > 0 && !/^[A-Z]/.test(v)) {
+    v = v.replace(/^[^A-Z]+/, '');
+  }
+  el.value = v.slice(0, maxLen);
+};
+
+// IP位址：只允許數字與小數點，格式如 20.135
+window.formatIPInput = function(el) {
+  let v = el.value;
+  // 只保留數字與小數點
+  v = v.replace(/[^0-9.]/g, '');
+  // 不允許連續兩個小數點
+  v = v.replace(/\.{2,}/g, '.');
+  el.value = v;
+};
 
 // ── Firebase Config ──
 function loadFBConfig() {
@@ -1427,7 +1505,7 @@ async function refreshLogBadge() {
 
 // ── Modal Open/Close ──
 const MODAL_FIELDS = {
-  pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','pos_type','start_date','end_date','is_central_collect','remark','change_reason'],
+  pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','pos_type','is_central_collect','start_date','end_date','remark'],
   edc: ['model','acquirer_bank','mid','tid','ip_addr','location','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark','change_reason'],
   peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','change_reason','remark'],
   edchw: ['purpose','model','acquirer_bank','mid','tid','status','inbound_date','change_reason','remark']
@@ -1484,7 +1562,7 @@ window.saveRecord = async function(type) {
   }
   // Validate required fields
   const reqMap = {
-    pos: ['machine_no','model','floor','ip_addr','status','change_reason'],
+    pos: ['machine_no','model','floor','status'],
     edc: ['model','acquirer_bank','mid','tid','change_reason'],
     peri: ['asset_no','dev_type','status'],
     edchw: ['purpose','model','status']
@@ -1492,7 +1570,7 @@ window.saveRecord = async function(type) {
   const missing = (reqMap[type]||[]).filter(f => !data[f]);
   if (missing.length > 0) { showToast('請填寫必填欄位', 'error'); return; }
 
-  const reason = data.change_reason || '手動操作';
+  const reason = data.change_reason || (type === 'pos' ? '資料設定' : '手動操作');
   const entityKey = data.machine_no || data.tid || data.asset_no || editingId || '—';
 
   try {
