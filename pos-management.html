@@ -231,6 +231,41 @@ textarea.form-control { resize: vertical; min-height: 72px; }
   display: flex; gap: 8px; justify-content: flex-end;
 }
 
+/* ── POS Modal 專用：緊湊三欄、放大字體 ── */
+.modal-body-pos { padding: 14px 18px 10px; }
+.pos-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px 14px;
+}
+.pos-section-label {
+  grid-column: 1/-1;
+  font-size: 11px; font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+  margin-top: 2px;
+}
+.pos-label {
+  display: block;
+  font-size: 13px; font-weight: 500; color: var(--text-sec);
+  margin-bottom: 3px;
+}
+.pos-label.required::after { content: ' *'; color: var(--danger); }
+.pos-control {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 14px; font-family: var(--font); color: var(--text-pri);
+  background: var(--surface);
+  outline: none; transition: border 0.15s;
+}
+.pos-control:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(30,45,64,0.08); }
+.pos-control::placeholder { color: var(--text-muted); }
+select.pos-control { cursor: pointer; }
+textarea.pos-control { resize: vertical; font-family: var(--font); }
+
 /* ── Filter bar ── */
 .filter-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
 .filter-bar .form-control { padding: 6px 10px; font-size: 13px; }
@@ -678,25 +713,24 @@ textarea.form-control { resize: vertical; min-height: 72px; }
       <span class="modal-title" id="modal-pos-title">新增 POS 收銀機</span>
       <button class="modal-close" onclick="closeModal('pos')">✕</button>
     </div>
-    <div class="modal-body">
-      <div class="form-grid form-grid-2" style="gap:14px">
-        <div class="form-section-title">基本資訊</div>
+    <div class="modal-body modal-body-pos">
+      <div class="form-grid pos-form-grid">
 
-        <!-- 機號：6字元，第一碼大寫英文 -->
+        <div class="pos-section-label">基本資訊</div>
+
+        <!-- 機號 -->
         <div class="form-group">
-          <label class="form-label required">機號</label>
-          <input class="form-control" id="pos-machine_no"
-            maxlength="6"
-            placeholder="例：A00001"
+          <label class="pos-label required">機號</label>
+          <input class="pos-control" id="pos-machine_no"
+            maxlength="6" placeholder="A00001"
             oninput="formatCodeInput(this,6)"
-            style="text-transform:uppercase;letter-spacing:0.06em">
-          <span class="form-hint">6字元；首碼須為英文字母（自動轉大寫）</span>
+            style="text-transform:uppercase;letter-spacing:0.08em">
         </div>
 
-        <!-- 機型：下拉選單 -->
+        <!-- 機型 -->
         <div class="form-group">
-          <label class="form-label required">機型</label>
-          <select class="form-control" id="pos-model">
+          <label class="pos-label required">機型</label>
+          <select class="pos-control" id="pos-model">
             <option value="">請選擇</option>
             <option value="9635">9635</option>
             <option value="大黑">大黑</option>
@@ -705,10 +739,10 @@ textarea.form-control { resize: vertical; min-height: 72px; }
           </select>
         </div>
 
-        <!-- 樓層：加 B2、91，移除 87 -->
+        <!-- 樓層 -->
         <div class="form-group">
-          <label class="form-label required">樓層</label>
-          <select class="form-control" id="pos-floor">
+          <label class="pos-label required">樓層</label>
+          <select class="pos-control" id="pos-floor">
             <option value="">請選擇</option>
             <option>B2</option><option>B1</option>
             <option>01</option><option>02</option><option>03</option>
@@ -720,42 +754,37 @@ textarea.form-control { resize: vertical; min-height: 72px; }
           </select>
         </div>
 
-        <!-- 櫃號：5字元，第一碼大寫英文 -->
+        <!-- 櫃號 -->
         <div class="form-group">
-          <label class="form-label">櫃號</label>
-          <input class="form-control" id="pos-booth_no"
-            maxlength="5"
-            placeholder="例：A0101"
+          <label class="pos-label required">櫃號</label>
+          <input class="pos-control" id="pos-booth_no"
+            maxlength="5" placeholder="A0101"
             oninput="formatCodeInput(this,5)"
-            style="text-transform:uppercase;letter-spacing:0.06em">
-          <span class="form-hint">5字元；首碼須為英文字母（自動轉大寫）</span>
+            style="text-transform:uppercase;letter-spacing:0.08em">
         </div>
 
-        <!-- 櫃名：最多 40 字元 -->
+        <!-- 櫃名 -->
         <div class="form-group">
-          <label class="form-label">櫃名</label>
-          <input class="form-control" id="pos-booth_name"
-            maxlength="40"
-            placeholder="例：UNIQLO">
-          <span class="form-hint">最多 40 字元</span>
+          <label class="pos-label required">櫃名</label>
+          <input class="pos-control" id="pos-booth_name"
+            maxlength="40" placeholder="例：UNIQLO">
         </div>
 
-        <!-- IP位址：接受如 20.135 格式 -->
+        <!-- IP位址 -->
         <div class="form-group">
-          <label class="form-label">IP位址</label>
-          <input class="form-control" id="pos-ip_addr"
-            placeholder="例：20.135"
+          <label class="pos-label required">IP位址</label>
+          <input class="pos-control" id="pos-ip_addr"
+            placeholder="20.135"
             oninput="formatIPInput(this)"
-            inputmode="decimal"
-            maxlength="7">
+            inputmode="decimal" maxlength="7">
         </div>
 
-        <div class="form-section-title">狀態與設定</div>
+        <div class="pos-section-label">狀態與設定</div>
 
-        <!-- 狀態：啟用、停用、虛擬、EC虛擬 -->
+        <!-- 狀態 -->
         <div class="form-group">
-          <label class="form-label required">狀態</label>
-          <select class="form-control" id="pos-status">
+          <label class="pos-label required">狀態</label>
+          <select class="pos-control" id="pos-status">
             <option value="啟用">啟用</option>
             <option value="停用">停用</option>
             <option value="虛擬">虛擬</option>
@@ -763,28 +792,21 @@ textarea.form-control { resize: vertical; min-height: 72px; }
           </select>
         </div>
 
-        <!-- 是否為特櫃：新增 -->
-        <div class="form-group">
-          <label class="form-label">是否為特櫃 <span style="font-size:11px;color:var(--text-muted)">(非使用101POS)</span></label>
-          <select class="form-control" id="pos-is_special_counter">
+        <!-- 是否為特櫃 -->
+        <div class="form-group" style="grid-column:span 2">
+          <label class="pos-label required">是否為特櫃
+            <span style="font-size:11px;font-weight:400;color:var(--text-muted)">（非使用101POS）</span>
+          </label>
+          <select class="pos-control" id="pos-is_special_counter">
             <option value="false">否</option>
             <option value="true">是</option>
           </select>
         </div>
 
-        <!-- 電話（原POS類型） -->
-        <div class="form-group">
-          <label class="form-label">電話</label>
-          <input class="form-control" id="pos-pos_type"
-            placeholder="例：02-8101-8101"
-            inputmode="tel"
-            maxlength="20">
-        </div>
-
         <!-- 是否統收 -->
         <div class="form-group">
-          <label class="form-label">是否統收</label>
-          <select class="form-control" id="pos-is_central_collect">
+          <label class="pos-label required">是否統收</label>
+          <select class="pos-control" id="pos-is_central_collect">
             <option value="false">否</option>
             <option value="true">是</option>
           </select>
@@ -792,21 +814,32 @@ textarea.form-control { resize: vertical; min-height: 72px; }
 
         <!-- 起始日期 -->
         <div class="form-group">
-          <label class="form-label">起始日期</label>
-          <input class="form-control" type="date" id="pos-start_date">
+          <label class="pos-label required">起始日期</label>
+          <input class="pos-control" type="date" id="pos-start_date">
         </div>
 
         <!-- 終止日期 -->
         <div class="form-group">
-          <label class="form-label">終止日期</label>
-          <input class="form-control" type="date" id="pos-end_date">
+          <label class="pos-label required">終止日期</label>
+          <input class="pos-control" type="date" id="pos-end_date">
         </div>
 
-        <!-- 備註 -->
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">備註</label>
-          <textarea class="form-control" id="pos-remark" placeholder="備註說明…"></textarea>
+        <!-- 電話（非必填） -->
+        <div class="form-group">
+          <label class="pos-label">電話</label>
+          <input class="pos-control" id="pos-pos_type"
+            placeholder="02-8101-8101"
+            inputmode="tel" maxlength="20">
         </div>
+
+        <!-- 備註（非必填，橫跨全列） -->
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="pos-label">備註</label>
+          <textarea class="pos-control" id="pos-remark"
+            placeholder="備註說明…"
+            style="min-height:52px;resize:vertical"></textarea>
+        </div>
+
       </div>
     </div>
     <div class="modal-footer">
@@ -1579,7 +1612,7 @@ window.saveRecord = async function(type) {
   }
   // Validate required fields
   const reqMap = {
-    pos: ['machine_no','model','floor','status'],
+    pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','is_central_collect','start_date','end_date'],
     edc: ['model','acquirer_bank','mid','tid','change_reason'],
     peri: ['asset_no','dev_type','status'],
     edchw: ['purpose','model','status']
