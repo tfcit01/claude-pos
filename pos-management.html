@@ -1620,6 +1620,31 @@ window.saveRecord = async function(type) {
   const missing = (reqMap[type]||[]).filter(f => !data[f]);
   if (missing.length > 0) { showToast('請填寫必填欄位', 'error'); return; }
 
+  // ── POS 唯一性檢查：機號、IP位址 ──
+  if (type === 'pos') {
+    const allPOS = await getData('pos');
+    // 編輯時排除自身；新增時比對全部
+    const others = editingId ? allPOS.filter(r => r.id !== editingId) : allPOS;
+
+    const dupMachineNo = others.find(r =>
+      r.machine_no && r.machine_no.toUpperCase() === data.machine_no.toUpperCase()
+    );
+    if (dupMachineNo) {
+      showToast(`機號「${data.machine_no}」已存在，請確認後重新輸入`, 'error');
+      document.getElementById('pos-machine_no').focus();
+      return;
+    }
+
+    const dupIP = others.find(r =>
+      r.ip_addr && r.ip_addr === data.ip_addr
+    );
+    if (dupIP) {
+      showToast(`IP位址「${data.ip_addr}」已被機號 ${dupIP.machine_no} 使用，請確認後重新輸入`, 'error');
+      document.getElementById('pos-ip_addr').focus();
+      return;
+    }
+  }
+
   const reason = data.change_reason || (type === 'pos' ? '資料設定' : '手動操作');
   const entityKey = data.machine_no || data.tid || data.asset_no || editingId || '—';
 
