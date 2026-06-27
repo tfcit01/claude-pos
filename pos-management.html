@@ -429,7 +429,7 @@ textarea.form-control { resize: vertical; min-height: 72px; }
           <option>Office</option><option>觀景台</option>
         </select>
         <select class="form-control" id="pos-status-filter" onchange="renderPOS()">
-          <option value="">全部狀態</option>
+          <option value="" selected>全部狀態</option>
           <option value="啟用">啟用</option>
           <option value="停用">停用</option>
           <option value="虛擬">虛擬</option>
@@ -747,8 +747,7 @@ textarea.form-control { resize: vertical; min-height: 72px; }
             placeholder="例：20.135"
             oninput="formatIPInput(this)"
             inputmode="decimal"
-            maxlength="20">
-          <span class="form-hint">僅輸入數字與小數點，例：20.135</span>
+            maxlength="7">
         </div>
 
         <div class="form-section-title">狀態與設定</div>
@@ -1116,13 +1115,22 @@ window.formatCodeInput = function(el, maxLen) {
   el.value = v.slice(0, maxLen);
 };
 
-// IP位址：只允許數字與小數點，格式如 20.135
+// IP位址：強制 XXX.XXX 格式（最多3位數.最多3位數）
 window.formatIPInput = function(el) {
   let v = el.value;
   // 只保留數字與小數點
   v = v.replace(/[^0-9.]/g, '');
-  // 不允許連續兩個小數點
+  // 不允許連續兩個以上小數點
   v = v.replace(/\.{2,}/g, '.');
+  // 分割成左右兩段，各限 3 位數
+  const parts = v.split('.');
+  const left  = parts[0].slice(0, 3);
+  if (parts.length >= 2) {
+    const right = parts[1].slice(0, 3);
+    v = left + '.' + right;
+  } else {
+    v = left;
+  }
   el.value = v;
 };
 
@@ -1228,7 +1236,16 @@ window.showPage = function(name) {
   document.getElementById('topbar-sub').textContent = s ? `/ ${s}` : '';
 
   if (name === 'dashboard') refreshDashboard();
-  else if (name === 'pos') renderPOS();
+  else if (name === 'pos') {
+    // 每次切換進入時重置篩選器，確保預設顯示全部
+    const s = document.getElementById('pos-search');
+    const f = document.getElementById('pos-floor-filter');
+    const st = document.getElementById('pos-status-filter');
+    if (s) s.value = '';
+    if (f) f.value = '';
+    if (st) st.value = '';
+    renderPOS();
+  }
   else if (name === 'edc') renderEDC();
   else if (name === 'peripheral') renderPeri();
   else if (name === 'edchw') renderEDCHW();
