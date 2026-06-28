@@ -505,7 +505,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <option>台新銀行</option><option>國泰世華</option><option>聯邦銀行</option>
           <option>中國信託</option><option>玉山銀行</option><option>永豐銀行</option>
         </select>
-        <button class="btn btn-primary" onclick="openModal('edc')">＋ 新增EDC設定</button>
+        <button class="btn btn-primary" onclick="openModal('edc')">＋ 新增EDC關聯</button>
       </div>
       <div class="card">
         <div class="card-header">
@@ -518,7 +518,6 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <thead>
               <tr>
                 <th>機型</th><th>收單行</th><th>MID</th><th>TID</th>
-                <th>紅利TID</th><th>分期TID</th><th>銀聯TID</th><th>AE TID</th>
                 <th>IP</th><th>位置</th><th>操作</th>
               </tr>
             </thead>
@@ -889,23 +888,6 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <label class="form-label">位置</label>
           <input class="form-control" id="edc-location" placeholder="例：01F-B101">
         </div>
-        <div class="form-section-title">加值功能 TID</div>
-        <div class="form-group">
-          <label class="form-label">紅利 TID</label>
-          <input class="form-control" id="edc-bonus_tid" placeholder="選填">
-        </div>
-        <div class="form-group">
-          <label class="form-label">分期 TID</label>
-          <input class="form-control" id="edc-installment_tid" placeholder="選填">
-        </div>
-        <div class="form-group">
-          <label class="form-label">銀聯 TID</label>
-          <input class="form-control" id="edc-unionpay_tid" placeholder="選填">
-        </div>
-        <div class="form-group">
-          <label class="form-label">AE TID</label>
-          <input class="form-control" id="edc-ae_tid" placeholder="選填">
-        </div>
         <div class="form-group" style="grid-column:1/-1">
           <label class="form-label">備註</label>
           <textarea class="form-control" id="edc-remark" placeholder="備註說明…" style="min-height:54px"></textarea>
@@ -1084,10 +1066,35 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <input class="pos-control" type="date" id="edchw-change_date">
         </div>
 
-        <!-- 異動原因（選填） -->
-        <div class="form-group" style="grid-column:span 2">
-          <label class="pos-label">異動原因</label>
-          <input class="pos-control" id="edchw-change_reason" placeholder="選填">
+        <!-- 加值功能 TID -->
+        <div class="pos-section-label">加值功能 TID</div>
+
+        <div class="form-group">
+          <label class="pos-label">紅利 TID</label>
+          <input class="pos-control" id="edchw-bonus_tid" placeholder="選填"
+            inputmode="numeric" maxlength="8"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,8)">
+        </div>
+
+        <div class="form-group">
+          <label class="pos-label">分期 TID</label>
+          <input class="pos-control" id="edchw-installment_tid" placeholder="選填"
+            inputmode="numeric" maxlength="8"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,8)">
+        </div>
+
+        <div class="form-group">
+          <label class="pos-label">銀聯 TID</label>
+          <input class="pos-control" id="edchw-unionpay_tid" placeholder="選填"
+            inputmode="numeric" maxlength="8"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,8)">
+        </div>
+
+        <div class="form-group">
+          <label class="pos-label">AE TID</label>
+          <input class="pos-control" id="edchw-ae_tid" placeholder="選填"
+            inputmode="numeric" maxlength="8"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,8)">
         </div>
 
         <!-- 備註（選填） -->
@@ -1495,10 +1502,6 @@ window.renderEDC = async function() {
       <td>${r.acquirer_bank||'—'}</td>
       <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.mid||'—'}</code></td>
       <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.tid||'—'}</code></td>
-      <td>${r.bonus_tid||'—'}</td>
-      <td>${r.installment_tid||'—'}</td>
-      <td>${r.unionpay_tid||'—'}</td>
-      <td>${r.ae_tid||'—'}</td>
       <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.ip_addr||'—'}</code></td>
       <td>${r.location||'—'}</td>
       <td>
@@ -1619,9 +1622,9 @@ async function refreshLogBadge() {
 // ── Modal Open/Close ──
 const MODAL_FIELDS = {
   pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','pos_type','is_central_collect','start_date','end_date','remark'],
-  edc: ['model','acquirer_bank','mid','tid','ip_addr','location','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark','change_reason'],
+  edc: ['model','acquirer_bank','mid','tid','ip_addr','location','remark','change_reason'],
   peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','change_reason','remark'],
-  edchw: ['purpose','model','acquirer_bank','mid','tid','status','inbound_date','change_date','change_reason','remark']
+  edchw: ['purpose','model','acquirer_bank','mid','tid','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark']
 };
 
 window.openModal = function(type) {
