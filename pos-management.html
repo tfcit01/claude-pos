@@ -358,14 +358,14 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
   <div class="nav-item" onclick="showPage('pos')">
     <span class="nav-icon">🖥️</span> POS收銀機
   </div>
+  <div class="nav-item" onclick="showPage('edchw')">
+    <span class="nav-icon">💳</span> EDC刷卡機
+  </div>
   <div class="nav-item" onclick="showPage('edc')">
-    <span class="nav-icon">💳</span> EDC刷卡機設定
+    <span class="nav-icon">🔗</span> POS-EDC關聯
   </div>
   <div class="nav-item" onclick="showPage('peripheral')">
-    <span class="nav-icon">🔌</span> POS周邊設備
-  </div>
-  <div class="nav-item" onclick="showPage('edchw')">
-    <span class="nav-icon">📦</span> 刷卡機硬體
+    <span class="nav-icon">🔌</span> POS週邊設備
   </div>
 
   <div class="sidebar-section-label">管理</div>
@@ -510,7 +510,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="card">
         <div class="card-header">
           <span>💳</span>
-          <span class="card-title">EDC刷卡機設定主檔</span>
+          <span class="card-title">POS-EDC關聯主檔</span>
           <span class="card-actions"><span id="edc-count" style="font-size:12px;color:var(--text-muted)"></span></span>
         </div>
         <div class="table-wrap">
@@ -550,7 +550,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="card">
         <div class="card-header">
           <span>🔌</span>
-          <span class="card-title">POS周邊設備硬體主檔</span>
+          <span class="card-title">POS週邊設備硬體主檔</span>
           <span class="card-actions"><span id="peri-count" style="font-size:12px;color:var(--text-muted)"></span></span>
         </div>
         <div class="table-wrap">
@@ -584,7 +584,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="card">
         <div class="card-header">
           <span>📦</span>
-          <span class="card-title">刷卡機硬體主檔</span>
+          <span class="card-title">EDC刷卡機主檔</span>
           <span class="card-actions"><span id="edchw-count" style="font-size:12px;color:var(--text-muted)"></span></span>
         </div>
         <div class="table-wrap">
@@ -609,9 +609,9 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
         <select class="form-control" id="log-type-filter" onchange="renderLog()">
           <option value="">全部類型</option>
           <option value="POS">POS收銀機</option>
-          <option value="EDC">EDC設定</option>
-          <option value="PERI">周邊設備</option>
-          <option value="EDCHW">刷卡機硬體</option>
+          <option value="EDC">POS-EDC關聯</option>
+          <option value="PERI">POS週邊設備</option>
+          <option value="EDCHW">EDC刷卡機</option>
         </select>
         <select class="form-control" id="log-action-filter" onchange="renderLog()">
           <option value="">全部異動</option>
@@ -987,7 +987,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
   <div class="modal">
     <div class="modal-header">
       <span>📦</span>
-      <span class="modal-title" id="modal-edchw-title">新增 刷卡機硬體</span>
+      <span class="modal-title" id="modal-edchw-title">新增 EDC 刷卡機</span>
       <button class="modal-close" onclick="closeModal('edchw')">✕</button>
     </div>
     <div class="modal-body">
@@ -1258,9 +1258,9 @@ window.showPage = function(name) {
   const titles = {
     dashboard: ['總覽儀表板', '設備狀態一覽'],
     pos: ['POS收銀機', '主檔管理'],
-    edc: ['EDC刷卡機設定', '主檔管理'],
-    peripheral: ['POS周邊設備', '硬體主檔'],
-    edchw: ['刷卡機硬體', '主檔管理'],
+    edc: ['POS-EDC關聯', '主檔管理'],
+    peripheral: ['POS週邊設備', '硬體主檔'],
+    edchw: ['EDC刷卡機', '主檔管理'],
     log: ['異動歷程紀錄', '全部異動'],
     config: ['系統設定', 'Firebase & 示範資料']
   };
@@ -1356,7 +1356,7 @@ async function refreshDashboard() {
   if (recent.length === 0) {
     recentEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>尚無異動紀錄</p></div>';
   } else {
-    const typeLabel = { POS:'POS', EDC:'EDC設定', PERI:'周邊', EDCHW:'刷卡機硬體' };
+    const typeLabel = { POS:'POS收銀機', EDC:'POS-EDC關聯', PERI:'POS週邊設備', EDCHW:'EDC刷卡機' };
     const actionLabel = { CREATE:'新增', UPDATE:'修改', STATUS:'狀態異動', DELETE:'刪除' };
     let html = '';
     recent.forEach(l => {
@@ -1530,7 +1530,7 @@ window.renderLog = async function() {
   document.getElementById('log-count').textContent = `共 ${filtered.length} 筆`;
 
   const actionLabel = { CREATE:'🆕 新增', UPDATE:'✏️ 修改', STATUS:'🔄 狀態', DELETE:'🗑 刪除' };
-  const typeLabel = { POS:'POS收銀機', EDC:'EDC設定', PERI:'周邊設備', EDCHW:'刷卡機硬體' };
+  const typeLabel = { POS:'POS收銀機', EDC:'POS-EDC關聯', PERI:'POS週邊設備', EDCHW:'EDC刷卡機' };
 
   const tbody = document.getElementById('log-tbody');
   if (filtered.length === 0) {
@@ -1565,7 +1565,7 @@ window.openModal = function(type) {
   editingId = null;
   editingType = type;
   clearForm(type);
-  const titleMap = { pos:'新增 POS 收銀機', edc:'新增 EDC 刷卡機設定', peri:'新增 周邊設備', edchw:'新增 刷卡機硬體' };
+  const titleMap = { pos:'新增 POS 收銀機', edc:'新增 POS-EDC 關聯', peri:'新增 週邊設備', edchw:'新增 EDC 刷卡機' };
   const titleEl = document.getElementById(`modal-${type}-title`);
   if (titleEl) titleEl.textContent = titleMap[type];
   document.getElementById(`modal-${type}`).classList.add('show');
@@ -1589,7 +1589,7 @@ window.editRecord = async function(type, id) {
   if (!record) return;
   editingId = id;
   editingType = type;
-  const titleMap = { pos:'編輯 POS 收銀機', edc:'編輯 EDC 設定', peri:'編輯 周邊設備', edchw:'編輯 刷卡機硬體' };
+  const titleMap = { pos:'編輯 POS 收銀機', edc:'編輯 POS-EDC 關聯', peri:'編輯 週邊設備', edchw:'編輯 EDC 刷卡機' };
   const titleEl = document.getElementById(`modal-${type}-title`);
   if (titleEl) titleEl.textContent = titleMap[type];
 
