@@ -574,12 +574,14 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="filter-bar">
         <input class="form-control" id="edchw-search" placeholder="搜尋MID、TID、機型…" oninput="renderEDCHW()">
         <select class="form-control" id="edchw-status-filter" onchange="renderEDCHW()">
-          <option value="">全部狀態</option>
-          <option value="使用中">使用中</option><option value="庫存">庫存</option>
-          <option value="維修中">維修中</option><option value="待報廢">待報廢</option>
-          <option value="已報廢">已報廢</option>
+          <option value="" selected>全部狀態</option>
+          <option value="庫存">庫存</option>
+          <option value="使用中">使用中</option>
+          <option value="維修中">維修中</option>
+          <option value="待退回">待退回</option>
+          <option value="已退回">已退回</option>
         </select>
-        <button class="btn btn-primary" onclick="openModal('edchw')">＋ 新增硬體</button>
+        <button class="btn btn-primary" onclick="openModal('edchw')">＋ 新增EDC</button>
       </div>
       <div class="card">
         <div class="card-header">
@@ -986,56 +988,115 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
 <div class="modal-overlay" id="modal-edchw">
   <div class="modal">
     <div class="modal-header">
-      <span>📦</span>
+      <span>💳</span>
       <span class="modal-title" id="modal-edchw-title">新增 EDC 刷卡機</span>
       <button class="modal-close" onclick="closeModal('edchw')">✕</button>
     </div>
-    <div class="modal-body">
-      <div class="form-grid form-grid-2" style="gap:14px">
+    <div class="modal-body modal-body-pos">
+      <div class="form-grid pos-form-grid">
+
+        <!-- 用途 -->
         <div class="form-group">
-          <label class="form-label required">用途</label>
-          <select class="form-control" id="edchw-purpose">
-            <option>一般刷卡</option><option>備機</option><option>測試機</option><option>其他</option>
+          <label class="pos-label required">用途</label>
+          <select class="pos-control" id="edchw-purpose">
+            <option value="正式機">正式機</option>
+            <option value="測試機">測試機</option>
+            <option value="其他">其他</option>
           </select>
         </div>
+
+        <!-- 機型 -->
         <div class="form-group">
-          <label class="form-label required">機型</label>
-          <input class="form-control" id="edchw-model" placeholder="例：VeriFone VX520">
-        </div>
-        <div class="form-group">
-          <label class="form-label">收單銀行</label>
-          <select class="form-control" id="edchw-acquirer_bank">
-            <option>台新銀行</option><option>國泰世華</option><option>聯邦銀行</option>
-            <option>中國信託</option><option>玉山銀行</option><option>永豐銀行</option><option>未設定</option>
+          <label class="pos-label required">機型</label>
+          <select class="pos-control" id="edchw-model">
+            <option value="">請選擇</option>
+            <option>VX820+520</option>
+            <option>VX820</option>
+            <option>X990-Plus</option>
+            <option>V3C+S300</option>
+            <option>X990-PINPad</option>
+            <option>MEGA-3000</option>
+            <option>V3C</option>
+            <option>Move/5000</option>
           </select>
         </div>
+
+        <!-- 收單銀行 -->
         <div class="form-group">
-          <label class="form-label">MID</label>
-          <input class="form-control" id="edchw-mid" placeholder="選填">
-        </div>
-        <div class="form-group">
-          <label class="form-label">TID</label>
-          <input class="form-control" id="edchw-tid" placeholder="選填">
-        </div>
-        <div class="form-group">
-          <label class="form-label required">狀態</label>
-          <select class="form-control" id="edchw-status">
-            <option>庫存</option><option>使用中</option><option>維修中</option>
-            <option>待報廢</option><option>已報廢</option>
+          <label class="pos-label required">收單銀行</label>
+          <select class="pos-control" id="edchw-acquirer_bank">
+            <option value="">請選擇</option>
+            <option value="中信">中信</option>
+            <option value="聯信">聯信</option>
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label">入庫日期</label>
-          <input class="form-control" type="date" id="edchw-inbound_date">
+
+        <!-- MID -->
+        <div class="form-group" style="grid-column:span 2">
+          <label class="pos-label required">MID（商店代號）</label>
+          <select class="pos-control" id="edchw-mid">
+            <option value="">請選擇</option>
+            <option value="0101000383">0101000383（一般）</option>
+            <option value="010500485">010500485（餐廳）</option>
+            <option value="011440006">011440006（觀景台）</option>
+            <option value="010500587">010500587（美食街）</option>
+            <option value="0101618526">0101618526（郵購）</option>
+            <option value="010100107">010100107（大額專用）</option>
+            <option value="0126900065">0126900065（自助售票）</option>
+            <option value="0101001295">0101001295（LV專用）</option>
+            <option value="0101001301">0101001301（LV大額專用）</option>
+            <option value="012690004">012690004（停管）</option>
+            <option value="101013178">101013178（聯信）</option>
+          </select>
         </div>
+
+        <!-- TID：8碼數字 -->
         <div class="form-group">
-          <label class="form-label">異動原因</label>
-          <input class="form-control" id="edchw-change_reason" placeholder="新增原因或異動說明">
+          <label class="pos-label required">TID（端末機號）</label>
+          <input class="pos-control" id="edchw-tid"
+            placeholder="8碼數字"
+            inputmode="numeric"
+            maxlength="8"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,8)">
         </div>
+
+        <!-- 狀態 -->
+        <div class="form-group">
+          <label class="pos-label required">狀態</label>
+          <select class="pos-control" id="edchw-status">
+            <option value="庫存" selected>庫存</option>
+            <option value="使用中">使用中</option>
+            <option value="維修中">維修中</option>
+            <option value="待退回">待退回</option>
+            <option value="已退回">已退回</option>
+          </select>
+        </div>
+
+        <!-- 入庫日期 -->
+        <div class="form-group">
+          <label class="pos-label required">入庫日期</label>
+          <input class="pos-control" type="date" id="edchw-inbound_date">
+        </div>
+
+        <!-- 異動日期 -->
+        <div class="form-group">
+          <label class="pos-label">異動日期</label>
+          <input class="pos-control" type="date" id="edchw-change_date">
+        </div>
+
+        <!-- 異動原因（選填） -->
+        <div class="form-group" style="grid-column:span 2">
+          <label class="pos-label">異動原因</label>
+          <input class="pos-control" id="edchw-change_reason" placeholder="選填">
+        </div>
+
+        <!-- 備註（選填） -->
         <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">備註</label>
-          <textarea class="form-control" id="edchw-remark" placeholder="備註說明…" style="min-height:54px"></textarea>
+          <label class="pos-label">備註</label>
+          <textarea class="pos-control" id="edchw-remark"
+            placeholder="備註說明…" style="min-height:52px;resize:vertical"></textarea>
         </div>
+
       </div>
     </div>
     <div class="modal-footer">
@@ -1064,6 +1125,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <select class="form-control" id="status-new-value">
             <option>使用中</option><option>庫存</option><option>備機</option>
             <option>維修中</option><option>停用</option><option>調撥中</option>
+            <option>待退回</option><option>已退回</option>
             <option>待報廢</option><option>已報廢</option><option>遺失</option>
           </select>
         </div>
@@ -1291,6 +1353,7 @@ function statusBadge(s) {
   const map = {
     '使用中': 'badge-active', '庫存': 'badge-stock', '備機': 'badge-standby',
     '維修中': 'badge-repair', '待報廢': 'badge-pending', '已報廢': 'badge-retire',
+    '待退回': 'badge-pending', '已退回': 'badge-retire',
     '停用': 'badge-disabled', '遺失': 'badge-retire', '調撥中': 'badge-transfer', '驗收中': 'badge-transfer'
   };
   return `<span class="badge ${map[s] || 'badge-disabled'}">${s || '—'}</span>`;
@@ -1558,7 +1621,7 @@ const MODAL_FIELDS = {
   pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','pos_type','is_central_collect','start_date','end_date','remark'],
   edc: ['model','acquirer_bank','mid','tid','ip_addr','location','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark','change_reason'],
   peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','change_reason','remark'],
-  edchw: ['purpose','model','acquirer_bank','mid','tid','status','inbound_date','change_reason','remark']
+  edchw: ['purpose','model','acquirer_bank','mid','tid','status','inbound_date','change_date','change_reason','remark']
 };
 
 window.openModal = function(type) {
@@ -1615,7 +1678,7 @@ window.saveRecord = async function(type) {
     pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','is_central_collect','start_date','end_date'],
     edc: ['model','acquirer_bank','mid','tid','change_reason'],
     peri: ['asset_no','dev_type','status'],
-    edchw: ['purpose','model','status']
+    edchw: ['purpose','model','acquirer_bank','mid','tid','status','inbound_date']
   };
   const missing = (reqMap[type]||[]).filter(f => !data[f]);
   if (missing.length > 0) { showToast('請填寫必填欄位', 'error'); return; }
