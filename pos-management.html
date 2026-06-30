@@ -566,7 +566,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <thead>
               <tr>
                 <th>資產編號</th><th>設備類型</th><th>型號</th><th>品牌</th>
-                <th>位置</th><th>狀態</th><th>建檔日期</th><th>備註</th><th>操作</th>
+                <th>位置</th><th>狀態</th><th>入庫日期</th><th>備註</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="peri-tbody">
@@ -1025,8 +1025,12 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
         </div>
 
         <div class="form-group">
-          <label class="pos-label">建檔日期</label>
-          <input class="pos-control" type="date" id="peri-inbound_date">
+          <label class="pos-label">入庫日期</label>
+          <input class="pos-control" id="peri-inbound_date"
+            placeholder="MMDD，例：0615"
+            inputmode="numeric"
+            maxlength="4"
+            oninput="formatInboundDateInput(this)">
         </div>
 
         <!-- 備註：取代異動原因，依狀態提示必填內容 -->
@@ -1445,12 +1449,15 @@ const PERI_MODEL_MAP = {
   'WiFi AP': ['ARUBA-APIN0535'],
 };
 
-// 設備類型變動時，依對應表重建型號 datalist（型號欄仍可直接輸入自由文字）
+// 設備類型變動時，先清空型號值，再依對應表重建型號 datalist（型號欄仍可直接輸入自由文字）
 window.onPeriDevTypeChange = function() {
   const devType = document.getElementById('peri-dev_type').value;
   const datalist = document.getElementById('peri-model-list');
   const modelInput = document.getElementById('peri-model_no');
   if (!datalist) return;
+
+  // 先清空原本選定的型號值
+  if (modelInput) modelInput.value = '';
 
   const models = PERI_MODEL_MAP[devType] || [];
   datalist.innerHTML = models.map(m => `<option value="${m}"></option>`).join('');
@@ -1483,6 +1490,29 @@ window.onPeriStatusChange = function() {
     locationEl.placeholder = '請填寫POS機號，例：A00001';
   }
 };
+
+// 入庫日期：僅接受4碼數字輸入（MMDD），只過濾非數字字元，年份於儲存時自動補上
+window.formatInboundDateInput = function(el) {
+  el.value = el.value.replace(/[^0-9]/g, '').slice(0, 4);
+};
+
+// 將 MMDD 轉為完整日期字串 YYYY-MM-DD（以當下年份補上）
+function mmddToFullDate(mmdd) {
+  if (!mmdd || mmdd.length !== 4) return '';
+  const mm = mmdd.slice(0, 2);
+  const dd = mmdd.slice(2, 4);
+  const year = new Date().getFullYear();
+  return `${year}-${mm}-${dd}`;
+}
+
+// 將完整日期字串 YYYY-MM-DD 轉回 MMDD 供輸入框顯示（編輯既有資料用）
+function fullDateToMMDD(dateStr) {
+  if (!dateStr) return '';
+  const s = String(dateStr).slice(0, 10); // 處理可能的 Firestore timestamp 物件已先轉字串的情況
+  const parts = s.split('-');
+  if (parts.length !== 3) return '';
+  return parts[1] + parts[2];
+}
 
 
 window.formatIPInput = function(el) {
@@ -1988,11 +2018,13 @@ window.editRecord = async function(type, id) {
     if (posInput) posInput.value = record.pos_machine_no || '';
     await onLinkedTIDInput(record.tid || '');
   }
-  // 硬體設備：依設備類型重建型號清單、依狀態套用對應標籤樣式
+  // 硬體設備：依設備類型重建型號清單、依狀態套用對應標籤樣式、入庫日期轉回MMDD顯示
   if (type === 'peri') {
     onPeriDevTypeChange();
     const modelEl = document.getElementById('peri-model_no');
     if (modelEl) modelEl.value = record.model_no || '';
+    const inboundEl = document.getElementById('peri-inbound_date');
+    if (inboundEl) inboundEl.value = fullDateToMMDD(record.inbound_date);
     onPeriStatusChange();
   }
   // clear reason for edit
@@ -2029,6 +2061,15 @@ window.saveRecord = async function(type) {
       showToast('狀態為「使用中」時，請於位置欄位填入POS機號', 'error');
       document.getElementById('peri-location').focus();
       return;
+    }
+    // 入庫日期：MMDD 轉為完整日期（年份取當下系統年）
+    if (data.inbound_date) {
+      if (data.inbound_date.length !== 4) {
+        showToast('入庫日期請輸入4碼數字（MMDD），例：0615', 'error');
+        document.getElementById('peri-inbound_date').focus();
+        return;
+      }
+      data.inbound_date = mmddToFullDate(data.inbound_date);
     }
   }
 
