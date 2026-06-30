@@ -592,12 +592,12 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <table>
             <thead>
               <tr>
-                <th>用途</th><th>機型</th><th>收單行</th><th>MID</th><th>TID</th>
+                <th>用途</th><th>機型</th><th>收單行</th><th>MID</th><th>TID</th><th>IP</th>
                 <th>狀態</th><th>入庫日期</th><th>異動日期</th><th>異動原因</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="edchw-tbody">
-              <tr><td colspan="10"><div class="empty-state"><div class="empty-icon">⏳</div><p>載入中…</p></div></td></tr>
+              <tr><td colspan="11"><div class="empty-state"><div class="empty-icon">⏳</div><p>載入中…</p></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -987,6 +987,16 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           </select>
         </div>
 
+        <!-- 收單銀行 -->
+        <div class="form-group">
+          <label class="pos-label required">收單銀行</label>
+          <select class="pos-control" id="edchw-acquirer_bank" onchange="filterMIDByBank()">
+            <option value="">請選擇</option>
+            <option value="中信">中信</option>
+            <option value="聯信">聯信</option>
+          </select>
+        </div>
+
         <!-- 機型 -->
         <div class="form-group">
           <label class="pos-label required">機型</label>
@@ -1003,32 +1013,22 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           </select>
         </div>
 
-        <!-- 收單銀行 -->
-        <div class="form-group">
-          <label class="pos-label required">收單銀行</label>
-          <select class="pos-control" id="edchw-acquirer_bank">
-            <option value="">請選擇</option>
-            <option value="中信">中信</option>
-            <option value="聯信">聯信</option>
-          </select>
-        </div>
-
         <!-- MID -->
-        <div class="form-group" style="grid-column:span 2">
+        <div class="form-group">
           <label class="pos-label required">MID（商店代號）</label>
           <select class="pos-control" id="edchw-mid">
-            <option value="">請選擇</option>
-            <option value="0101000383">0101000383（一般）</option>
-            <option value="010500485">010500485（餐廳）</option>
-            <option value="011440006">011440006（觀景台）</option>
-            <option value="010500587">010500587（美食街）</option>
-            <option value="0101618526">0101618526（郵購）</option>
-            <option value="010100107">010100107（大額專用）</option>
-            <option value="0126900065">0126900065（自助售票）</option>
-            <option value="0101001295">0101001295（LV專用）</option>
-            <option value="0101001301">0101001301（LV大額專用）</option>
-            <option value="012690004">012690004（停管）</option>
-            <option value="101013178">101013178（聯信）</option>
+            <option value="">請先選擇收單銀行</option>
+            <option value="0101000383" data-bank="中信">0101000383（一般）</option>
+            <option value="010500485" data-bank="中信">010500485（餐廳）</option>
+            <option value="011440006" data-bank="中信">011440006（觀景台）</option>
+            <option value="010500587" data-bank="中信">010500587（美食街）</option>
+            <option value="0101618526" data-bank="中信">0101618526（郵購）</option>
+            <option value="010100107" data-bank="中信">010100107（大額專用）</option>
+            <option value="0126900065" data-bank="中信">0126900065（自助售票）</option>
+            <option value="0101001295" data-bank="中信">0101001295（LV專用）</option>
+            <option value="0101001301" data-bank="中信">0101001301（LV大額專用）</option>
+            <option value="012690004" data-bank="中信">012690004（停管）</option>
+            <option value="101013178" data-bank="聯信">101013178（聯信）</option>
           </select>
         </div>
 
@@ -1040,6 +1040,16 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             inputmode="numeric"
             maxlength="8"
             oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,8)">
+        </div>
+
+        <!-- IP：IPv4格式 -->
+        <div class="form-group">
+          <label class="pos-label required">IP</label>
+          <input class="pos-control" id="edchw-ip_addr"
+            placeholder="192.168.1.100"
+            inputmode="decimal"
+            maxlength="15"
+            oninput="formatIPv4Input(this)">
         </div>
 
         <!-- 狀態 -->
@@ -1217,7 +1227,30 @@ window.formatCodeInput = function(el, maxLen) {
   el.value = v.slice(0, maxLen);
 };
 
-// IP位址：強制 XXX.XXX 格式（最多3位數.最多3位數）
+// EDC刷卡機：依收單銀行篩選 MID 選項（聯信僅顯示101013178，中信顯示其餘所有）
+window.filterMIDByBank = function() {
+  const bank = document.getElementById('edchw-acquirer_bank').value;
+  const midSelect = document.getElementById('edchw-mid');
+  if (!midSelect) return;
+  const options = midSelect.querySelectorAll('option');
+  let hasVisibleSelected = false;
+
+  options.forEach(opt => {
+    if (!opt.dataset.bank) {
+      // 預設提示選項，永遠顯示
+      opt.hidden = false;
+      return;
+    }
+    const match = !bank || opt.dataset.bank === bank;
+    opt.hidden = !match;
+    if (match && opt.selected) hasVisibleSelected = true;
+  });
+
+  // 若目前選中的 MID 不屬於新銀行，重置為預設提示選項
+  if (!hasVisibleSelected) {
+    midSelect.value = '';
+  }
+};
 window.formatIPInput = function(el) {
   let v = el.value;
   // 只保留數字與小數點
@@ -1234,6 +1267,24 @@ window.formatIPInput = function(el) {
     v = left;
   }
   el.value = v;
+};
+
+// IP位址（EDC刷卡機）：強制完整 IPv4 格式 XXX.XXX.XXX.XXX，每段 0-255
+window.formatIPv4Input = function(el) {
+  let v = el.value;
+  // 只保留數字與小數點
+  v = v.replace(/[^0-9.]/g, '');
+  // 不允許連續兩個以上小數點
+  v = v.replace(/\.{2,}/g, '.');
+  // 最多分成4段，每段最多3位數字
+  let parts = v.split('.').slice(0, 4).map(p => p.slice(0, 3));
+  // 每段數值不可超過255
+  parts = parts.map(p => {
+    if (p === '') return p;
+    const n = parseInt(p, 10);
+    return n > 255 ? '255' : p;
+  });
+  el.value = parts.join('.');
 };
 
 // ── Firebase Config ──
@@ -1563,7 +1614,7 @@ window.renderEDCHW = async function() {
   document.getElementById('edchw-count').textContent = `共 ${filtered.length} 筆`;
   const tbody = document.getElementById('edchw-tbody');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">📦</div><p>無符合條件的硬體</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">📦</div><p>無符合條件的硬體</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(r => `
@@ -1573,6 +1624,7 @@ window.renderEDCHW = async function() {
       <td>${r.acquirer_bank||'—'}</td>
       <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.mid||'—'}</code></td>
       <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.tid||'—'}</code></td>
+      <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.ip_addr||'—'}</code></td>
       <td>${statusBadge(r.status)}</td>
       <td>${fmtDate(r.inbound_date)}</td>
       <td>${fmtDate(r.change_date)}</td>
@@ -1624,7 +1676,7 @@ const MODAL_FIELDS = {
   pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','pos_type','is_central_collect','start_date','end_date','remark'],
   edc: ['model','acquirer_bank','mid','tid','ip_addr','location','remark','change_reason'],
   peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','change_reason','remark'],
-  edchw: ['purpose','model','acquirer_bank','mid','tid','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark']
+  edchw: ['purpose','model','acquirer_bank','mid','tid','ip_addr','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark']
 };
 
 window.openModal = function(type) {
@@ -1634,6 +1686,7 @@ window.openModal = function(type) {
   const titleMap = { pos:'新增 POS 收銀機', edc:'新增 POS-EDC 關聯', peri:'新增 週邊設備', edchw:'新增 EDC 刷卡機' };
   const titleEl = document.getElementById(`modal-${type}-title`);
   if (titleEl) titleEl.textContent = titleMap[type];
+  if (type === 'edchw') filterMIDByBank();
   document.getElementById(`modal-${type}`).classList.add('show');
 };
 
@@ -1663,6 +1716,12 @@ window.editRecord = async function(type, id) {
     const el = document.getElementById(`${type}-${f}`);
     if (el) el.value = record[f] !== undefined ? record[f] : '';
   });
+  // EDC刷卡機：依既有收單銀行篩選MID選項，再帶回原MID值
+  if (type === 'edchw') {
+    filterMIDByBank();
+    const midEl = document.getElementById('edchw-mid');
+    if (midEl && record.mid !== undefined) midEl.value = record.mid;
+  }
   // clear reason for edit
   const reasonEl = document.getElementById(`${type}-change_reason`);
   if (reasonEl) reasonEl.value = '';
@@ -1681,7 +1740,7 @@ window.saveRecord = async function(type) {
     pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','is_central_collect','start_date','end_date'],
     edc: ['model','acquirer_bank','mid','tid','change_reason'],
     peri: ['asset_no','dev_type','status'],
-    edchw: ['purpose','model','acquirer_bank','mid','tid','status','inbound_date']
+    edchw: ['purpose','model','acquirer_bank','mid','tid','ip_addr','status','inbound_date']
   };
   const missing = (reqMap[type]||[]).filter(f => !data[f]);
   if (missing.length > 0) { showToast('請填寫必填欄位', 'error'); return; }
