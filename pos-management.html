@@ -265,6 +265,13 @@ textarea.form-control { resize: vertical; min-height: 72px; }
 .pos-control::placeholder { color: var(--text-muted); }
 select.pos-control { cursor: pointer; }
 textarea.pos-control { resize: vertical; font-family: var(--font); }
+.pos-readonly-value {
+  padding: 6px 9px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: #F8F9FB;
+  font-size: 14px; color: var(--text-pri);
+  min-height: 17px;
+}
 
 /* ── Filter bar ── */
 .filter-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
@@ -499,17 +506,17 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
     <!-- ─ EDC ─ -->
     <div class="page" id="page-edc">
       <div class="filter-bar">
-        <input class="form-control" id="edc-search" placeholder="搜尋MID、TID、銀行…" oninput="renderEDC()">
-        <select class="form-control" id="edc-bank-filter" onchange="renderEDC()">
-          <option value="">全部收單行</option>
-          <option>台新銀行</option><option>國泰世華</option><option>聯邦銀行</option>
-          <option>中國信託</option><option>玉山銀行</option><option>永豐銀行</option>
+        <input class="form-control" id="edc-search" placeholder="搜尋POS機號、關聯TID…" oninput="renderEDC()">
+        <select class="form-control" id="edc-status-filter" onchange="renderEDC()">
+          <option value="" selected>全部狀態</option>
+          <option value="啟用">啟用</option>
+          <option value="停用">停用</option>
         </select>
         <button class="btn btn-primary" onclick="openModal('edc')">＋ 新增EDC關聯</button>
       </div>
       <div class="card">
         <div class="card-header">
-          <span>💳</span>
+          <span>🔗</span>
           <span class="card-title">POS-EDC關聯主檔</span>
           <span class="card-actions"><span id="edc-count" style="font-size:12px;color:var(--text-muted)"></span></span>
         </div>
@@ -517,8 +524,8 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <table>
             <thead>
               <tr>
-                <th>機型</th><th>收單行</th><th>MID</th><th>TID</th>
-                <th>IP</th><th>位置</th><th>操作</th>
+                <th>POS機號</th><th>特殊用途</th><th>關聯TID</th>
+                <th>起始日期</th><th>終止日期</th><th>狀態</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="edc-tbody">
@@ -850,52 +857,104 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
   </div>
 </div>
 
-<!-- EDC Modal -->
+<!-- EDC Modal (POS-EDC 關聯) -->
 <div class="modal-overlay" id="modal-edc">
-  <div class="modal modal-lg">
+  <div class="modal">
     <div class="modal-header">
-      <span>💳</span>
-      <span class="modal-title" id="modal-edc-title">新增 EDC 刷卡機設定</span>
+      <span>🔗</span>
+      <span class="modal-title" id="modal-edc-title">新增 POS-EDC 關聯</span>
       <button class="modal-close" onclick="closeModal('edc')">✕</button>
     </div>
-    <div class="modal-body">
-      <div class="form-grid form-grid-3" style="gap:14px">
-        <div class="form-section-title">基本設定</div>
+    <div class="modal-body modal-body-pos">
+      <div class="form-grid pos-form-grid">
+
+        <!-- POS機號：查詢已建檔POS主檔 -->
         <div class="form-group">
-          <label class="form-label required">機型</label>
-          <input class="form-control" id="edc-model" placeholder="例：VeriFone VX520">
+          <label class="pos-label required">POS機號</label>
+          <input class="pos-control" id="edc-pos_machine_no"
+            list="pos-machine-no-list"
+            maxlength="6"
+            placeholder="輸入或選擇機號"
+            style="text-transform:uppercase"
+            oninput="onPOSMachineNoInput(this)">
+          <datalist id="pos-machine-no-list"></datalist>
         </div>
+
+        <!-- 特殊用途 -->
         <div class="form-group">
-          <label class="form-label required">收單銀行</label>
-          <select class="form-control" id="edc-acquirer_bank">
-            <option>台新銀行</option><option>國泰世華</option><option>聯邦銀行</option>
-            <option>中國信託</option><option>玉山銀行</option><option>永豐銀行</option><option>其他</option>
+          <label class="pos-label">特殊用途</label>
+          <select class="pos-control" id="edc-special_purpose" onchange="onSpecialPurposeChange()">
+            <option value="">無</option>
+            <option value="帳務專用">帳務專用（F39921）</option>
+            <option value="統收">統收</option>
           </select>
         </div>
+
+        <!-- 統收時：撈選機號開頭為A的POS清單 -->
+        <div class="form-group" id="edc-central-collect-wrap" style="display:none">
+          <label class="pos-label">統收 POS 機號</label>
+          <select class="pos-control" id="edc-central_collect_pos" onchange="onCentralCollectPosChange()">
+            <option value="">請選擇</option>
+          </select>
+        </div>
+
+        <!-- 關聯TID：8碼數字，查詢EDC刷卡機主檔 -->
         <div class="form-group">
-          <label class="form-label required">MID（商店代號）</label>
-          <input class="form-control" id="edc-mid" placeholder="例：123456789012345">
+          <label class="pos-label required">關聯TID</label>
+          <input class="pos-control" id="edc-tid"
+            placeholder="8碼數字"
+            inputmode="numeric"
+            maxlength="8"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,8); onLinkedTIDInput(this.value)">
         </div>
+
+        <!-- 起始日期 -->
         <div class="form-group">
-          <label class="form-label required">TID（端末機號）</label>
-          <input class="form-control" id="edc-tid" placeholder="例：12345678">
+          <label class="pos-label required">起始日期</label>
+          <input class="pos-control" type="date" id="edc-start_date">
         </div>
+
+        <!-- 終止日期 -->
         <div class="form-group">
-          <label class="form-label">IP位址</label>
-          <input class="form-control" id="edc-ip_addr" placeholder="例：192.168.1.201">
+          <label class="pos-label required">終止日期</label>
+          <input class="pos-control" type="date" id="edc-end_date">
         </div>
+
+        <!-- 狀態 -->
         <div class="form-group">
-          <label class="form-label">位置</label>
-          <input class="form-control" id="edc-location" placeholder="例：01F-B101">
+          <label class="pos-label required">狀態</label>
+          <select class="pos-control" id="edc-status">
+            <option value="啟用" selected>啟用</option>
+            <option value="停用">停用</option>
+          </select>
         </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">備註</label>
-          <textarea class="form-control" id="edc-remark" placeholder="備註說明…" style="min-height:54px"></textarea>
+
+        <!-- 已設定資料顯示區（依關聯TID查詢EDC刷卡機主檔顯示） -->
+        <div class="pos-section-label" id="edc-tid-info-label" style="display:none">已設定資料（依關聯TID查詢）</div>
+        <div class="form-group" id="edc-info-ip-wrap" style="display:none">
+          <label class="pos-label">IP</label>
+          <div class="pos-readonly-value" id="edc-info-ip">—</div>
         </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label required">異動原因</label>
-          <input class="form-control" id="edc-change_reason" placeholder="請說明新增/異動原因">
+        <div class="form-group" id="edc-info-bonus-wrap" style="display:none">
+          <label class="pos-label">紅利 TID</label>
+          <div class="pos-readonly-value" id="edc-info-bonus">—</div>
         </div>
+        <div class="form-group" id="edc-info-installment-wrap" style="display:none">
+          <label class="pos-label">分期 TID</label>
+          <div class="pos-readonly-value" id="edc-info-installment">—</div>
+        </div>
+        <div class="form-group" id="edc-info-unionpay-wrap" style="display:none">
+          <label class="pos-label">銀聯 TID</label>
+          <div class="pos-readonly-value" id="edc-info-unionpay">—</div>
+        </div>
+        <div class="form-group" id="edc-info-ae-wrap" style="display:none">
+          <label class="pos-label">AE TID</label>
+          <div class="pos-readonly-value" id="edc-info-ae">—</div>
+        </div>
+        <div class="form-group" id="edc-info-notfound-wrap" style="display:none;grid-column:1/-1">
+          <div style="font-size:12px;color:var(--danger);padding:6px 0">⚠️ 查無此 TID 對應的 EDC 刷卡機資料，請先至「EDC刷卡機」頁面建檔。</div>
+        </div>
+
       </div>
     </div>
     <div class="modal-footer">
@@ -1251,6 +1310,100 @@ window.filterMIDByBank = function() {
     midSelect.value = '';
   }
 };
+
+// ════════════════════════════════════════
+// POS-EDC 關聯：相關連動邏輯
+// ════════════════════════════════════════
+
+// 填充 POS機號 datalist（供查詢已建檔資料）
+async function populatePOSMachineNoList() {
+  const list = await getData('pos');
+  const datalist = document.getElementById('pos-machine-no-list');
+  if (!datalist) return;
+  datalist.innerHTML = list
+    .filter(r => r.machine_no)
+    .map(r => `<option value="${r.machine_no}">${r.booth_name || ''}</option>`)
+    .join('');
+}
+
+// 輸入POS機號時的即時校驗提示（純前端輔助，不阻擋輸入）
+window.onPOSMachineNoInput = function(el) {
+  el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+};
+
+// 特殊用途切換：帳務專用自動帶入固定機號；統收則顯示選單供挑選
+window.onSpecialPurposeChange = async function() {
+  const val = document.getElementById('edc-special_purpose').value;
+  const posInput = document.getElementById('edc-pos_machine_no');
+  const ccWrap = document.getElementById('edc-central-collect-wrap');
+
+  if (val === '帳務專用') {
+    if (posInput) { posInput.value = 'F39921'; posInput.readOnly = true; }
+    if (ccWrap) ccWrap.style.display = 'none';
+  } else if (val === '統收') {
+    if (posInput) { posInput.value = ''; posInput.readOnly = true; }
+    if (ccWrap) ccWrap.style.display = '';
+    await populateCentralCollectOptions();
+  } else {
+    if (posInput) { posInput.value = ''; posInput.readOnly = false; }
+    if (ccWrap) ccWrap.style.display = 'none';
+  }
+};
+
+// 統收：撈選機號開頭為 A 的已建檔POS清單
+async function populateCentralCollectOptions() {
+  const list = await getData('pos');
+  const sel = document.getElementById('edc-central_collect_pos');
+  if (!sel) return;
+  const aList = list.filter(r => r.machine_no && r.machine_no.toUpperCase().startsWith('A'));
+  sel.innerHTML = '<option value="">請選擇</option>' +
+    aList.map(r => `<option value="${r.machine_no}">${r.machine_no}${r.booth_name ? '（'+r.booth_name+'）' : ''}</option>`).join('');
+}
+
+// 選擇統收POS機號後，帶入POS機號欄位
+window.onCentralCollectPosChange = function() {
+  const sel = document.getElementById('edc-central_collect_pos');
+  const posInput = document.getElementById('edc-pos_machine_no');
+  if (posInput) posInput.value = sel.value;
+};
+
+function resetCentralCollectWrap() {
+  const ccWrap = document.getElementById('edc-central-collect-wrap');
+  if (ccWrap) ccWrap.style.display = 'none';
+  const posInput = document.getElementById('edc-pos_machine_no');
+  if (posInput) posInput.readOnly = false;
+}
+
+function resetEDCInfoPanel() {
+  document.getElementById('edc-tid-info-label').style.display = 'none';
+  ['ip','bonus','installment','unionpay','ae'].forEach(k => {
+    document.getElementById(`edc-info-${k}-wrap`).style.display = 'none';
+  });
+  document.getElementById('edc-info-notfound-wrap').style.display = 'none';
+}
+
+// 輸入關聯TID後，依TID查詢EDC刷卡機主檔，顯示其詳細資料
+window.onLinkedTIDInput = async function(tid) {
+  resetEDCInfoPanel();
+  if (!tid || tid.length !== 8) return;
+
+  const edcHwList = await getData('edchw');
+  const match = edcHwList.find(r => r.tid === tid);
+
+  document.getElementById('edc-tid-info-label').style.display = '';
+
+  if (!match) {
+    document.getElementById('edc-info-notfound-wrap').style.display = '';
+    return;
+  }
+
+  const fieldMap = { ip: match.ip_addr, bonus: match.bonus_tid, installment: match.installment_tid, unionpay: match.unionpay_tid, ae: match.ae_tid };
+  Object.entries(fieldMap).forEach(([k, v]) => {
+    document.getElementById(`edc-info-${k}-wrap`).style.display = '';
+    document.getElementById(`edc-info-${k}`).textContent = v || '—';
+  });
+};
+
 window.formatIPInput = function(el) {
   let v = el.value;
   // 只保留數字與小數點
@@ -1534,30 +1687,30 @@ window.renderPOS = async function() {
 window.renderEDC = async function() {
   const list = await getData('edc');
   const search = document.getElementById('edc-search').value.toLowerCase();
-  const bank = document.getElementById('edc-bank-filter').value;
+  const status = document.getElementById('edc-status-filter').value;
 
   let filtered = list.filter(r => {
-    const s = [r.mid, r.tid, r.acquirer_bank, r.model].join(' ').toLowerCase();
-    return (!search || s.includes(search)) && (!bank || r.acquirer_bank === bank);
+    const s = [r.pos_machine_no, r.tid].join(' ').toLowerCase();
+    return (!search || s.includes(search)) && (!status || r.status === status);
   });
 
   document.getElementById('edc-count').textContent = `共 ${filtered.length} 筆`;
   const tbody = document.getElementById('edc-tbody');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">💳</div><p>無符合條件的EDC設定</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">🔗</div><p>無符合條件的關聯資料</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(r => `
     <tr>
-      <td>${r.model||'—'}</td>
-      <td>${r.acquirer_bank||'—'}</td>
-      <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.mid||'—'}</code></td>
+      <td><strong>${r.pos_machine_no||'—'}</strong></td>
+      <td>${r.special_purpose||'—'}</td>
       <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.tid||'—'}</code></td>
-      <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.ip_addr||'—'}</code></td>
-      <td>${r.location||'—'}</td>
+      <td>${fmtDate(r.start_date)}</td>
+      <td>${fmtDate(r.end_date)}</td>
+      <td>${statusBadge(r.status)}</td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="editRecord('edc','${r.id}')">編輯</button>
-        <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteRecord('edc','${r.id}','TID:${r.tid||''}')">刪除</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteRecord('edc','${r.id}','POS:${r.pos_machine_no||''}')">刪除</button>
       </td>
     </tr>`).join('');
 };
@@ -1674,7 +1827,7 @@ async function refreshLogBadge() {
 // ── Modal Open/Close ──
 const MODAL_FIELDS = {
   pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','pos_type','is_central_collect','start_date','end_date','remark'],
-  edc: ['model','acquirer_bank','mid','tid','ip_addr','location','remark','change_reason'],
+  edc: ['pos_machine_no','special_purpose','tid','start_date','end_date','status'],
   peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','change_reason','remark'],
   edchw: ['purpose','model','acquirer_bank','mid','tid','ip_addr','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark']
 };
@@ -1687,6 +1840,7 @@ window.openModal = function(type) {
   const titleEl = document.getElementById(`modal-${type}-title`);
   if (titleEl) titleEl.textContent = titleMap[type];
   if (type === 'edchw') filterMIDByBank();
+  if (type === 'edc') { populatePOSMachineNoList(); resetEDCInfoPanel(); resetCentralCollectWrap(); }
   document.getElementById(`modal-${type}`).classList.add('show');
 };
 
@@ -1700,6 +1854,14 @@ function clearForm(type) {
     const el = document.getElementById(`${type}-${f}`);
     if (el) el.value = '';
   });
+  if (type === 'edc') {
+    const ccSel = document.getElementById('edc-central_collect_pos');
+    if (ccSel) ccSel.value = '';
+    const statusEl = document.getElementById('edc-status');
+    if (statusEl) statusEl.value = '啟用';
+    const posInput = document.getElementById('edc-pos_machine_no');
+    if (posInput) posInput.readOnly = false;
+  }
 }
 
 window.editRecord = async function(type, id) {
@@ -1722,6 +1884,21 @@ window.editRecord = async function(type, id) {
     const midEl = document.getElementById('edchw-mid');
     if (midEl && record.mid !== undefined) midEl.value = record.mid;
   }
+  // POS-EDC關聯：填充機號清單、套用特殊用途狀態、依TID查詢顯示資料
+  if (type === 'edc') {
+    await populatePOSMachineNoList();
+    const specialEl = document.getElementById('edc-special_purpose');
+    if (specialEl) specialEl.value = record.special_purpose || '';
+    onSpecialPurposeChange();
+    if (record.special_purpose === '統收') {
+      await populateCentralCollectOptions();
+      const ccEl = document.getElementById('edc-central_collect_pos');
+      if (ccEl) ccEl.value = record.pos_machine_no || '';
+    }
+    const posInput = document.getElementById('edc-pos_machine_no');
+    if (posInput) posInput.value = record.pos_machine_no || '';
+    await onLinkedTIDInput(record.tid || '');
+  }
   // clear reason for edit
   const reasonEl = document.getElementById(`${type}-change_reason`);
   if (reasonEl) reasonEl.value = '';
@@ -1738,7 +1915,7 @@ window.saveRecord = async function(type) {
   // Validate required fields
   const reqMap = {
     pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','is_central_collect','start_date','end_date'],
-    edc: ['model','acquirer_bank','mid','tid','change_reason'],
+    edc: ['pos_machine_no','tid','start_date','end_date','status'],
     peri: ['asset_no','dev_type','status'],
     edchw: ['purpose','model','acquirer_bank','mid','tid','ip_addr','status','inbound_date']
   };
@@ -1883,18 +2060,18 @@ window.loadDemoData = async function() {
   const today = new Date().toISOString().slice(0,10);
 
   const posData = [
-    { machine_no:'POS-01-001', model:'CASIO V-R7100', floor:'01', booth_no:'01F-A01', booth_name:'UNIQLO', ip_addr:'192.168.1.101', status:'使用中', pos_type:'一般收銀', start_date:'2022-01-15', is_central_collect:'false', change_reason:'初始設定', remark:'' },
-    { machine_no:'POS-01-002', model:'CASIO V-R7100', floor:'01', booth_no:'01F-A01', booth_name:'UNIQLO', ip_addr:'192.168.1.102', status:'使用中', pos_type:'一般收銀', start_date:'2022-01-15', is_central_collect:'false', change_reason:'初始設定', remark:'' },
-    { machine_no:'POS-02-001', model:'CASIO V-R200', floor:'02', booth_no:'02F-B05', booth_name:'Zara', ip_addr:'192.168.2.101', status:'使用中', pos_type:'一般收銀', start_date:'2021-08-01', is_central_collect:'false', change_reason:'初始設定', remark:'' },
-    { machine_no:'POS-B1-001', model:'IBM SurePOS 500', floor:'B1', booth_no:'B1-C10', booth_name:'超市', ip_addr:'192.168.0.201', status:'維修中', pos_type:'一般收銀', start_date:'2020-03-10', is_central_collect:'true', change_reason:'觸控螢幕故障送修', remark:'預計兩週後取回' },
-    { machine_no:'POS-STOCK-001', model:'CASIO V-R7100', floor:'Office', booth_no:'', booth_name:'備品庫', ip_addr:'', status:'庫存', pos_type:'', start_date:today, is_central_collect:'false', change_reason:'備品庫存', remark:'新機待配置' },
-    { machine_no:'POS-85-001', model:'NCR Silver', floor:'85', booth_no:'85F-D01', booth_name:'頂樓餐廳', ip_addr:'192.168.5.101', status:'使用中', pos_type:'餐飲', start_date:'2023-06-01', is_central_collect:'false', change_reason:'餐廳新開幕', remark:'' },
+    { machine_no:'A00001', model:'9635', floor:'01', booth_no:'A0101', booth_name:'UNIQLO', ip_addr:'192.168', status:'啟用', is_special_counter:'false', pos_type:'02-8101-8888', is_central_collect:'false', start_date:'2022-01-15', end_date:'2027-01-14', remark:'' },
+    { machine_no:'A00002', model:'9635', floor:'01', booth_no:'A0101', booth_name:'UNIQLO', ip_addr:'192.168', status:'啟用', is_special_counter:'false', pos_type:'02-8101-8888', is_central_collect:'false', start_date:'2022-01-15', end_date:'2027-01-14', remark:'' },
+    { machine_no:'B00010', model:'大黑', floor:'02', booth_no:'B0205', booth_name:'Zara', ip_addr:'192.169', status:'啟用', is_special_counter:'false', pos_type:'02-8101-8899', is_central_collect:'false', start_date:'2021-08-01', end_date:'2026-07-31', remark:'' },
+    { machine_no:'C00100', model:'mPOS', floor:'B1', booth_no:'C0110', booth_name:'超市', ip_addr:'192.170', status:'停用', is_special_counter:'false', pos_type:'', is_central_collect:'true', start_date:'2020-03-10', end_date:'2025-03-09', remark:'觸控螢幕故障，暫停使用' },
+    { machine_no:'F39921', model:'安卓', floor:'Office', booth_no:'', booth_name:'帳務專用機', ip_addr:'192.171', status:'啟用', is_special_counter:'true', pos_type:'', is_central_collect:'false', start_date:'2021-08-01', end_date:'2026-07-31', remark:'總帳務作業專用，非門店收銀機' },
+    { machine_no:'D00085', model:'9635', floor:'85', booth_no:'D8501', booth_name:'頂樓餐廳', ip_addr:'192.172', status:'啟用', is_special_counter:'false', pos_type:'02-8101-8985', is_central_collect:'false', start_date:'2023-06-01', end_date:'2028-05-31', remark:'' },
   ];
 
   const edcData = [
-    { model:'VeriFone VX520', acquirer_bank:'台新銀行', mid:'123456789012345', tid:'12345678', ip_addr:'192.168.1.151', location:'01F-A01', bonus_tid:'12345679', installment_tid:'12345680', unionpay_tid:'', ae_tid:'12345681', remark:'', change_reason:'初始設定' },
-    { model:'VeriFone VX520', acquirer_bank:'國泰世華', mid:'987654321012345', tid:'87654321', ip_addr:'192.168.2.151', location:'02F-B05', bonus_tid:'', installment_tid:'87654322', unionpay_tid:'', ae_tid:'', remark:'', change_reason:'初始設定' },
-    { model:'Ingenico iWL250', acquirer_bank:'中國信託', mid:'555666777888999', tid:'55566677', ip_addr:'192.168.0.251', location:'B1-C10', bonus_tid:'55566678', installment_tid:'', unionpay_tid:'55566679', ae_tid:'', remark:'', change_reason:'初始設定' },
+    { pos_machine_no:'A00001', special_purpose:'', tid:'12345678', start_date:'2022-01-15', end_date:'2027-01-14', status:'啟用' },
+    { pos_machine_no:'A00002', special_purpose:'', tid:'87654321', start_date:'2022-01-15', end_date:'2027-01-14', status:'啟用' },
+    { pos_machine_no:'F39921', special_purpose:'帳務專用', tid:'55566677', start_date:'2021-08-01', end_date:'2026-07-31', status:'啟用' },
   ];
 
   const periData = [
@@ -1907,9 +2084,9 @@ window.loadDemoData = async function() {
   ];
 
   const edchwData = [
-    { purpose:'一般刷卡', model:'VeriFone VX520', acquirer_bank:'台新銀行', mid:'123456789012345', tid:'12345678', status:'使用中', inbound_date:'2022-01-15', change_date:'', change_reason:'初始入庫', remark:'' },
-    { purpose:'備機', model:'VeriFone VX520', acquirer_bank:'未設定', mid:'', tid:'', status:'庫存', inbound_date:'2023-05-01', change_date:'', change_reason:'備機入庫', remark:'台新銀行備機' },
-    { purpose:'一般刷卡', model:'Ingenico iWL250', acquirer_bank:'中國信託', mid:'555666777888999', tid:'55566677', status:'維修中', inbound_date:'2021-08-01', change_date:today, change_reason:'無線通訊故障送修', remark:'' },
+    { purpose:'正式機', model:'VX820+520', acquirer_bank:'中信', mid:'0101000383', tid:'12345678', ip_addr:'192.168.1.151', status:'使用中', inbound_date:'2022-01-15', change_date:'', bonus_tid:'12345679', installment_tid:'12345680', unionpay_tid:'', ae_tid:'12345681', remark:'' },
+    { purpose:'正式機', model:'X990-Plus', acquirer_bank:'中信', mid:'010500485', tid:'87654321', ip_addr:'192.168.2.151', status:'庫存', inbound_date:'2023-05-01', change_date:'', bonus_tid:'', installment_tid:'87654322', unionpay_tid:'', ae_tid:'', remark:'餐廳備機' },
+    { purpose:'正式機', model:'V3C', acquirer_bank:'聯信', mid:'101013178', tid:'55566677', ip_addr:'192.168.0.251', status:'維修中', inbound_date:'2021-08-01', change_date:today, bonus_tid:'55566678', installment_tid:'', unionpay_tid:'55566679', ae_tid:'', remark:'' },
   ];
 
   showToast('示範資料載入中…', 'info');
