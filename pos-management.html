@@ -546,12 +546,14 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <option>感應讀卡機</option><option>掃描器</option><option>悠遊卡機</option><option>WiFi AP</option>
         </select>
         <select class="form-control" id="peri-status-filter" onchange="renderPeri()">
-          <option value="">全部狀態</option>
-          <option value="使用中">使用中</option><option value="庫存">庫存</option>
-          <option value="維修中">維修中</option><option value="備機">備機</option>
+          <option value="" selected>全部狀態</option>
+          <option value="庫存">庫存</option>
+          <option value="使用中">使用中</option>
+          <option value="借出">借出</option>
+          <option value="維修中">維修中</option>
           <option value="已報廢">已報廢</option>
         </select>
-        <button class="btn btn-primary" onclick="openModal('peri')">＋ 新增周邊設備</button>
+        <button class="btn btn-primary" onclick="openModal('peri')">＋ 新增硬體設備</button>
       </div>
       <div class="card">
         <div class="card-header">
@@ -563,8 +565,8 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <table>
             <thead>
               <tr>
-                <th>資產編號</th><th>設備類型</th><th>品牌</th><th>型號</th>
-                <th>位置</th><th>狀態</th><th>建檔日期</th><th>異動原因</th><th>操作</th>
+                <th>資產編號</th><th>設備類型</th><th>型號</th><th>品牌</th>
+                <th>位置</th><th>狀態</th><th>建檔日期</th><th>備註</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="peri-tbody">
@@ -969,55 +971,79 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
   <div class="modal">
     <div class="modal-header">
       <span>🔌</span>
-      <span class="modal-title" id="modal-peri-title">新增 周邊設備</span>
+      <span class="modal-title" id="modal-peri-title">新增 硬體設備</span>
       <button class="modal-close" onclick="closeModal('peri')">✕</button>
     </div>
-    <div class="modal-body">
-      <div class="form-grid form-grid-2" style="gap:14px">
+    <div class="modal-body modal-body-pos">
+      <div class="form-grid pos-form-grid">
+
+        <!-- 1. 設備類型 -->
         <div class="form-group">
-          <label class="form-label required">資產編號</label>
-          <input class="form-control" id="peri-asset_no" placeholder="例：IT-2024-001">
-        </div>
-        <div class="form-group">
-          <label class="form-label required">設備類型</label>
-          <select class="form-control" id="peri-dev_type">
+          <label class="pos-label required">設備類型</label>
+          <select class="pos-control" id="peri-dev_type" onchange="onPeriDevTypeChange()">
+            <option value="">請選擇</option>
             <option>POS主機</option><option>發票機</option><option>UPS</option>
             <option>感應讀卡機</option><option>掃描器</option><option>悠遊卡機</option><option>WiFi AP</option>
           </select>
         </div>
+
+        <!-- 2. 資產編號：文字與數字 -->
         <div class="form-group">
-          <label class="form-label">品牌</label>
-          <input class="form-control" id="peri-brand" placeholder="例：EPSON">
+          <label class="pos-label required">資產編號</label>
+          <input class="pos-control" id="peri-asset_no" placeholder="例：IT-2024-001">
         </div>
+
+        <!-- 3. 型號：依設備類型動態選單，可填可選 -->
         <div class="form-group">
-          <label class="form-label">型號</label>
-          <input class="form-control" id="peri-model_no" placeholder="例：TM-T88VI">
+          <label class="pos-label required">型號</label>
+          <input class="pos-control" id="peri-model_no"
+            list="peri-model-list"
+            placeholder="請先選擇設備類型">
+          <datalist id="peri-model-list"></datalist>
         </div>
+
         <div class="form-group">
-          <label class="form-label">位置</label>
-          <input class="form-control" id="peri-location" placeholder="例：01F-B101">
+          <label class="pos-label">品牌</label>
+          <input class="pos-control" id="peri-brand" placeholder="例：EPSON">
         </div>
+
+        <!-- 4. 狀態：庫存為預設，借出/使用中觸發對應必填 -->
         <div class="form-group">
-          <label class="form-label required">狀態</label>
-          <select class="form-control" id="peri-status">
-            <option>使用中</option><option>庫存</option><option>備機</option>
-            <option>維修中</option><option>已報廢</option>
+          <label class="pos-label required">狀態</label>
+          <select class="pos-control" id="peri-status" onchange="onPeriStatusChange()">
+            <option value="庫存" selected>庫存</option>
+            <option value="使用中">使用中</option>
+            <option value="借出">借出</option>
+            <option value="維修中">維修中</option>
+            <option value="已報廢">已報廢</option>
           </select>
         </div>
+
         <div class="form-group">
-          <label class="form-label">建檔日期</label>
-          <input class="form-control" type="date" id="peri-inbound_date">
+          <label class="pos-label" id="peri-location-label">位置</label>
+          <input class="pos-control" id="peri-location" placeholder="例：01F-B101">
         </div>
+
         <div class="form-group">
-          <label class="form-label">異動原因</label>
-          <input class="form-control" id="peri-change_reason" placeholder="新增原因或異動說明">
+          <label class="pos-label">建檔日期</label>
+          <input class="pos-control" type="date" id="peri-inbound_date">
         </div>
+
+        <!-- 備註：取代異動原因，依狀態提示必填內容 -->
         <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">備註</label>
-          <textarea class="form-control" id="peri-remark" placeholder="備註說明…" style="min-height:54px"></textarea>
+          <label class="pos-label" id="peri-remark-label">備註</label>
+          <textarea class="pos-control" id="peri-remark"
+            placeholder="備註說明…" style="min-height:52px;resize:vertical"></textarea>
         </div>
+
       </div>
     </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('peri')">取消</button>
+      <button class="btn btn-primary" onclick="saveRecord('peri')">💾 儲存</button>
+    </div>
+  </div>
+</div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('peri')">取消</button>
       <button class="btn btn-primary" onclick="saveRecord('peri')">💾 儲存</button>
@@ -1404,6 +1430,61 @@ window.onLinkedTIDInput = async function(tid) {
   });
 };
 
+// ════════════════════════════════════════
+// 硬體設備（POS週邊/硬體設備）：相關連動邏輯
+// ════════════════════════════════════════
+
+// 設備類型 → 對應型號清單
+const PERI_MODEL_MAP = {
+  'POS主機': ['9635', '大黑'],
+  '發票機': ['EPSON-T70', 'EPSON-T82II', 'EPSON-T82III'],
+  'UPS': ['飛碟FT-TS10H'],
+  '感應讀卡機': ['NFC-ACR1252U'],
+  '掃描器': ['手持式 Honeywell-1900', '桌上型 Honeywell-HF680'],
+  '悠遊卡機': ['商場 QP-1000', '觀景台 QP-3000E'],
+  'WiFi AP': ['ARUBA-APIN0535'],
+};
+
+// 設備類型變動時，依對應表重建型號 datalist（型號欄仍可直接輸入自由文字）
+window.onPeriDevTypeChange = function() {
+  const devType = document.getElementById('peri-dev_type').value;
+  const datalist = document.getElementById('peri-model-list');
+  const modelInput = document.getElementById('peri-model_no');
+  if (!datalist) return;
+
+  const models = PERI_MODEL_MAP[devType] || [];
+  datalist.innerHTML = models.map(m => `<option value="${m}"></option>`).join('');
+  if (modelInput) modelInput.placeholder = devType ? '請選擇或輸入型號' : '請先選擇設備類型';
+};
+
+// 狀態變動時：借出→備註需填借用者；使用中→位置需填POS機號
+window.onPeriStatusChange = function() {
+  const status = document.getElementById('peri-status').value;
+  const remarkLabel = document.getElementById('peri-remark-label');
+  const remarkEl = document.getElementById('peri-remark');
+  const locationLabel = document.getElementById('peri-location-label');
+  const locationEl = document.getElementById('peri-location');
+
+  // 重置標籤
+  remarkLabel.textContent = '備註';
+  remarkLabel.classList.remove('required');
+  remarkEl.placeholder = '備註說明…';
+  locationLabel.textContent = '位置';
+  locationLabel.classList.remove('required');
+  locationEl.placeholder = '例：01F-B101';
+
+  if (status === '借出') {
+    remarkLabel.textContent = '備註（借用者）';
+    remarkLabel.classList.add('required');
+    remarkEl.placeholder = '請填寫借用者姓名/單位';
+  } else if (status === '使用中') {
+    locationLabel.textContent = '位置（POS機號）';
+    locationLabel.classList.add('required');
+    locationEl.placeholder = '請填寫POS機號，例：A00001';
+  }
+};
+
+
 window.formatIPInput = function(el) {
   let v = el.value;
   // 只保留數字與小數點
@@ -1562,7 +1643,7 @@ window.showPage = function(name) {
 // ── Status Badge ──
 function statusBadge(s) {
   const map = {
-    '使用中': 'badge-active', '庫存': 'badge-stock', '備機': 'badge-standby',
+    '使用中': 'badge-active', '庫存': 'badge-stock', '備機': 'badge-standby', '借出': 'badge-standby',
     '維修中': 'badge-repair', '待報廢': 'badge-pending', '已報廢': 'badge-retire',
     '待退回': 'badge-pending', '已退回': 'badge-retire',
     '停用': 'badge-disabled', '遺失': 'badge-retire', '調撥中': 'badge-transfer', '驗收中': 'badge-transfer'
@@ -1732,19 +1813,19 @@ window.renderPeri = async function() {
   document.getElementById('peri-count').textContent = `共 ${filtered.length} 筆`;
   const tbody = document.getElementById('peri-tbody');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🔌</div><p>無符合條件的周邊設備</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🔌</div><p>無符合條件的硬體設備</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(r => `
     <tr>
       <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.asset_no||'—'}</code></td>
       <td>${r.dev_type||'—'}</td>
-      <td>${r.brand||'—'}</td>
       <td>${r.model_no||'—'}</td>
+      <td>${r.brand||'—'}</td>
       <td>${r.location||'—'}</td>
       <td>${statusBadge(r.status)}</td>
       <td>${fmtDate(r.inbound_date)}</td>
-      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.change_reason||''}">${r.change_reason||'—'}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.remark||''}">${r.remark||'—'}</td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="editRecord('peri','${r.id}')">編輯</button>
         <button class="btn btn-outline btn-sm" onclick="openStatusChange('peri','${r.id}','${r.status||''}')">狀態</button>
@@ -1828,7 +1909,7 @@ async function refreshLogBadge() {
 const MODAL_FIELDS = {
   pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','pos_type','is_central_collect','start_date','end_date','remark'],
   edc: ['pos_machine_no','special_purpose','tid','start_date','end_date','status'],
-  peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','change_reason','remark'],
+  peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','remark'],
   edchw: ['purpose','model','acquirer_bank','mid','tid','ip_addr','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark']
 };
 
@@ -1841,6 +1922,7 @@ window.openModal = function(type) {
   if (titleEl) titleEl.textContent = titleMap[type];
   if (type === 'edchw') filterMIDByBank();
   if (type === 'edc') { populatePOSMachineNoList(); resetEDCInfoPanel(); resetCentralCollectWrap(); }
+  if (type === 'peri') onPeriStatusChange();
   document.getElementById(`modal-${type}`).classList.add('show');
 };
 
@@ -1861,6 +1943,13 @@ function clearForm(type) {
     if (statusEl) statusEl.value = '啟用';
     const posInput = document.getElementById('edc-pos_machine_no');
     if (posInput) posInput.readOnly = false;
+  }
+  if (type === 'peri') {
+    const statusEl = document.getElementById('peri-status');
+    if (statusEl) statusEl.value = '庫存';
+    document.getElementById('peri-model-list').innerHTML = '';
+    document.getElementById('peri-model_no').placeholder = '請先選擇設備類型';
+    onPeriStatusChange();
   }
 }
 
@@ -1899,6 +1988,13 @@ window.editRecord = async function(type, id) {
     if (posInput) posInput.value = record.pos_machine_no || '';
     await onLinkedTIDInput(record.tid || '');
   }
+  // 硬體設備：依設備類型重建型號清單、依狀態套用對應標籤樣式
+  if (type === 'peri') {
+    onPeriDevTypeChange();
+    const modelEl = document.getElementById('peri-model_no');
+    if (modelEl) modelEl.value = record.model_no || '';
+    onPeriStatusChange();
+  }
   // clear reason for edit
   const reasonEl = document.getElementById(`${type}-change_reason`);
   if (reasonEl) reasonEl.value = '';
@@ -1916,11 +2012,25 @@ window.saveRecord = async function(type) {
   const reqMap = {
     pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','is_central_collect','start_date','end_date'],
     edc: ['pos_machine_no','tid','start_date','end_date','status'],
-    peri: ['asset_no','dev_type','status'],
+    peri: ['asset_no','dev_type','model_no','status'],
     edchw: ['purpose','model','acquirer_bank','mid','tid','ip_addr','status','inbound_date']
   };
   const missing = (reqMap[type]||[]).filter(f => !data[f]);
   if (missing.length > 0) { showToast('請填寫必填欄位', 'error'); return; }
+
+  // ── 硬體設備：狀態驅動的條件式必填 ──
+  if (type === 'peri') {
+    if (data.status === '借出' && !data.remark) {
+      showToast('狀態為「借出」時，請於備註欄位填寫借用者', 'error');
+      document.getElementById('peri-remark').focus();
+      return;
+    }
+    if (data.status === '使用中' && !data.location) {
+      showToast('狀態為「使用中」時，請於位置欄位填入POS機號', 'error');
+      document.getElementById('peri-location').focus();
+      return;
+    }
+  }
 
   // ── POS 唯一性檢查：機號、IP位址 ──
   if (type === 'pos') {
@@ -2075,12 +2185,12 @@ window.loadDemoData = async function() {
   ];
 
   const periData = [
-    { asset_no:'IT-2022-001', dev_type:'發票機', brand:'EPSON', model_no:'TM-T88VI', location:'01F-A01', status:'使用中', inbound_date:'2022-01-15', change_reason:'新機安裝', remark:'' },
-    { asset_no:'IT-2022-002', dev_type:'掃描器', brand:'Honeywell', model_no:'Voyager 1200g', location:'01F-A01', status:'使用中', inbound_date:'2022-01-15', change_reason:'新機安裝', remark:'' },
-    { asset_no:'IT-2020-015', dev_type:'UPS', brand:'APC', model_no:'BE600M1', location:'B1-C10', status:'使用中', inbound_date:'2020-03-10', change_reason:'新機安裝', remark:'' },
-    { asset_no:'IT-2023-030', dev_type:'WiFi AP', brand:'Cisco', model_no:'WAP150', location:'01F 走道', status:'使用中', inbound_date:'2023-01-01', change_reason:'擴充無線網路', remark:'' },
-    { asset_no:'IT-2021-008', dev_type:'悠遊卡機', brand:'EASYCARD', model_no:'ECR-300', location:'02F-B05', status:'維修中', inbound_date:'2021-08-01', change_reason:'感應模組故障', remark:'送廠維修中' },
-    { asset_no:'IT-2019-003', dev_type:'感應讀卡機', brand:'HID', model_no:'OMNIKEY 5321', location:'Office', status:'庫存', inbound_date:'2019-06-01', change_reason:'備品', remark:'' },
+    { asset_no:'IT-2022-001', dev_type:'發票機', model_no:'EPSON-T82II', brand:'EPSON', location:'A00001', status:'使用中', inbound_date:'2022-01-15', remark:'UNIQLO 01F櫃位使用' },
+    { asset_no:'IT-2022-002', dev_type:'掃描器', model_no:'手持式 Honeywell-1900', brand:'Honeywell', location:'A00001', status:'使用中', inbound_date:'2022-01-15', remark:'' },
+    { asset_no:'IT-2020-015', dev_type:'UPS', model_no:'飛碟FT-TS10H', brand:'飛碟', location:'C00100', status:'使用中', inbound_date:'2020-03-10', remark:'' },
+    { asset_no:'IT-2023-030', dev_type:'WiFi AP', model_no:'ARUBA-APIN0535', brand:'ARUBA', location:'01F 走道', status:'庫存', inbound_date:'2023-01-01', remark:'擴充無線網路備用機' },
+    { asset_no:'IT-2021-008', dev_type:'悠遊卡機', model_no:'商場 QP-1000', brand:'QPay', location:'B0205', status:'維修中', inbound_date:'2021-08-01', remark:'感應模組故障，送廠維修中' },
+    { asset_no:'IT-2019-003', dev_type:'感應讀卡機', model_no:'NFC-ACR1252U', brand:'ACS', location:'IT辦公室', status:'借出', inbound_date:'2019-06-01', remark:'王小明（IT部門）借用測試' },
   ];
 
   const edchwData = [
