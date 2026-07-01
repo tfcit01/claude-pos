@@ -231,46 +231,46 @@ textarea.form-control { resize: vertical; min-height: 72px; }
   display: flex; gap: 8px; justify-content: flex-end;
 }
 
-/* ── POS-EDC 關聯表格：放大字體、縮減間距 ── */
+/* ── POS-EDC 關聯表格：統一字體、粗體表頭、排序支援 ── */
 .edc-table { font-size: 14px; }
 .edc-table th {
   padding: 8px 10px;
-  font-size: 12px;
-  line-height: 1.3;
+  font-size: 13px; font-weight: 700;
+  color: var(--text-pri);
+  cursor: pointer; user-select: none;
+  white-space: nowrap;
 }
-.edc-table td { padding: 8px 10px; }
+.edc-table th:last-child { cursor: default; }
+.edc-table th .sort-arrow {
+  display: inline-block; margin-left: 4px;
+  font-size: 11px; color: var(--text-muted);
+  transition: opacity 0.15s;
+}
+.edc-table th.sort-asc .sort-arrow,
+.edc-table th.sort-desc .sort-arrow { color: var(--navy); }
+.edc-table td { padding: 8px 10px; font-size: 14px; vertical-align: middle; }
 .edc-table .th-sub {
   font-size: 10px; font-weight: 400;
   color: var(--text-muted); letter-spacing: 0;
-  text-transform: none;
+  text-transform: none; display: block; margin-top: 1px;
 }
-.edc-table .tid-main {
+.edc-table .tid-wrap {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 4px;
+}
+.edc-table .tid-chip {
   font-family: monospace; font-size: 13px;
-  background: #f4f6f8; padding: 1px 6px;
-  border-radius: 3px; display: inline-block;
+  background: #f0f2f5; padding: 2px 7px;
+  border-radius: 4px; display: inline-block;
+  color: var(--text-pri); white-space: nowrap;
 }
-.edc-table .tid-sub {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px 8px;
-  margin-top: 4px;
+.edc-table .tid-chip.main {
+  background: #e3eaf5; color: var(--navy); font-weight: 600;
 }
-.edc-table .tid-sub-item {
-  font-size: 11px; color: var(--text-muted);
-  display: flex; align-items: center; gap: 3px;
+.edc-table .tid-chip.muted {
+  background: #f4f6f8; color: var(--text-sec); font-size: 12px;
 }
-.edc-table .tid-sub-label {
-  font-size: 10px; color: #aaa;
-  flex-shrink: 0;
-}
-.edc-table .tid-sub-val {
-  font-family: monospace; font-size: 11px;
-  color: var(--text-sec);
-}
-.edc-table .status-date {
-  font-size: 12px; color: var(--text-muted);
-  white-space: nowrap;
-}
+.edc-table .status-date { white-space: nowrap; }
 .modal-body-pos { padding: 14px 18px 10px; }
 .pos-form-grid {
   display: grid;
@@ -560,16 +560,16 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <span class="card-actions"><span id="edc-count" style="font-size:12px;color:var(--text-muted)"></span></span>
         </div>
         <div class="table-wrap">
-          <table class="edc-table">
+          <table class="edc-table" id="edc-table">
             <thead>
               <tr>
-                <th>POS機號</th>
-                <th>特殊用途</th>
-                <th>關聯TID<br><span class="th-sub">紅利 / 分期 / 銀聯 / AE</span></th>
-                <th>起始日期</th>
-                <th>終止日期</th>
-                <th>狀態</th>
-                <th>最後切換<br>狀態日期</th>
+                <th data-key="pos_machine_no" onclick="sortEDCTable('pos_machine_no')">POS機號<span class="sort-arrow">⇅</span></th>
+                <th data-key="special_purpose" onclick="sortEDCTable('special_purpose')">特殊用途<span class="sort-arrow">⇅</span></th>
+                <th data-key="tid" onclick="sortEDCTable('tid')">關聯TID <span class="th-sub">（含紅利 / 分期 / 銀聯 / AE）</span><span class="sort-arrow">⇅</span></th>
+                <th data-key="start_date" onclick="sortEDCTable('start_date')">起始日期<span class="sort-arrow">⇅</span></th>
+                <th data-key="end_date" onclick="sortEDCTable('end_date')">終止日期<span class="sort-arrow">⇅</span></th>
+                <th data-key="status" onclick="sortEDCTable('status')">狀態<span class="sort-arrow">⇅</span></th>
+                <th data-key="status_change_date" onclick="sortEDCTable('status_change_date')">最後切換狀態日期<span class="sort-arrow">⇅</span></th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -1840,9 +1840,34 @@ window.renderPOS = async function() {
 };
 
 // ── EDC ──
+// 排序狀態
+let edcSortKey = '';
+let edcSortAsc = true;
+
+window.sortEDCTable = function(key) {
+  if (edcSortKey === key) {
+    edcSortAsc = !edcSortAsc;
+  } else {
+    edcSortKey = key;
+    edcSortAsc = true;
+  }
+  // 更新表頭箭頭樣式
+  document.querySelectorAll('#edc-table th[data-key]').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    const arrow = th.querySelector('.sort-arrow');
+    if (th.dataset.key === key) {
+      th.classList.add(edcSortAsc ? 'sort-asc' : 'sort-desc');
+      if (arrow) arrow.textContent = edcSortAsc ? '↑' : '↓';
+    } else {
+      if (arrow) arrow.textContent = '⇅';
+    }
+  });
+  renderEDC();
+};
+
 window.renderEDC = async function() {
   const list = await getData('edc');
-  const edcHwList = await getData('edchw');  // 用於查詢四個加值TID
+  const edcHwList = await getData('edchw');
   const search = document.getElementById('edc-search').value.toLowerCase();
   const status = document.getElementById('edc-status-filter').value;
 
@@ -1850,6 +1875,15 @@ window.renderEDC = async function() {
     const s = [r.pos_machine_no, r.tid].join(' ').toLowerCase();
     return (!search || s.includes(search)) && (!status || r.status === status);
   });
+
+  // 套用排序
+  if (edcSortKey) {
+    filtered.sort((a, b) => {
+      const va = String(a[edcSortKey] || '');
+      const vb = String(b[edcSortKey] || '');
+      return edcSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+  }
 
   document.getElementById('edc-count').textContent = `共 ${filtered.length} 筆`;
   const tbody = document.getElementById('edc-tbody');
@@ -1859,28 +1893,25 @@ window.renderEDC = async function() {
   }
 
   tbody.innerHTML = filtered.map(r => {
-    // 依關聯TID查詢EDC刷卡機主檔，取得四個加值TID
     const hw = edcHwList.find(h => h.tid === r.tid) || {};
-    const mkTidSub = (label, val) =>
-      `<div class="tid-sub-item">
-        <span class="tid-sub-label">${label}</span>
-        <span class="tid-sub-val">${val || '—'}</span>
-      </div>`;
+    const chip = (val) => val
+      ? `<span class="tid-chip muted">${val}</span>`
+      : '';
 
     return `<tr>
-      <td><strong style="font-size:15px">${r.pos_machine_no||'—'}</strong></td>
-      <td style="font-size:13px">${r.special_purpose||'—'}</td>
+      <td><strong>${r.pos_machine_no||'—'}</strong></td>
+      <td>${r.special_purpose||'—'}</td>
       <td>
-        <span class="tid-main">${r.tid||'—'}</span>
-        <div class="tid-sub">
-          ${mkTidSub('紅利', hw.bonus_tid)}
-          ${mkTidSub('分期', hw.installment_tid)}
-          ${mkTidSub('銀聯', hw.unionpay_tid)}
-          ${mkTidSub('AE', hw.ae_tid)}
+        <div class="tid-wrap">
+          <span class="tid-chip main">${r.tid||'—'}</span>
+          ${chip(hw.bonus_tid)}
+          ${chip(hw.installment_tid)}
+          ${chip(hw.unionpay_tid)}
+          ${chip(hw.ae_tid)}
         </div>
       </td>
-      <td style="white-space:nowrap">${fmtDate(r.start_date)}</td>
-      <td style="white-space:nowrap">${fmtDate(r.end_date)}</td>
+      <td>${fmtDate(r.start_date)}</td>
+      <td>${fmtDate(r.end_date)}</td>
       <td>${statusBadge(r.status)}</td>
       <td class="status-date">${r.status_change_date ? fmtDate(r.status_change_date) : '—'}</td>
       <td>
