@@ -254,21 +254,11 @@ textarea.form-control { resize: vertical; min-height: 72px; }
   color: var(--text-muted); letter-spacing: 0;
   text-transform: none; display: block; margin-top: 1px;
 }
-.edc-table .tid-wrap {
-  display: flex; flex-wrap: wrap; align-items: center;
-  gap: 4px;
-}
 .edc-table .tid-chip {
   font-family: monospace; font-size: 13px;
   background: #f0f2f5; padding: 2px 7px;
   border-radius: 4px; display: inline-block;
   color: var(--text-pri); white-space: nowrap;
-}
-.edc-table .tid-chip.main {
-  background: #e3eaf5; color: var(--navy); font-weight: 600;
-}
-.edc-table .tid-chip.muted {
-  background: #f4f6f8; color: var(--text-sec); font-size: 12px;
 }
 .edc-table .status-date { white-space: nowrap; }
 .modal-body-pos { padding: 14px 18px 10px; }
@@ -565,7 +555,11 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
               <tr>
                 <th data-key="pos_machine_no" onclick="sortEDCTable('pos_machine_no')">POS機號<span class="sort-arrow">⇅</span></th>
                 <th data-key="special_purpose" onclick="sortEDCTable('special_purpose')">特殊用途<span class="sort-arrow">⇅</span></th>
-                <th data-key="tid" onclick="sortEDCTable('tid')">關聯TID <span class="th-sub">（含紅利 / 分期 / 銀聯 / AE）</span><span class="sort-arrow">⇅</span></th>
+                <th data-key="tid" onclick="sortEDCTable('tid')">TID<span class="sort-arrow">⇅</span></th>
+                <th>紅利</th>
+                <th>分期</th>
+                <th>銀聯</th>
+                <th>AE</th>
                 <th data-key="start_date" onclick="sortEDCTable('start_date')">起始日期<span class="sort-arrow">⇅</span></th>
                 <th data-key="end_date" onclick="sortEDCTable('end_date')">終止日期<span class="sort-arrow">⇅</span></th>
                 <th data-key="status" onclick="sortEDCTable('status')">狀態<span class="sort-arrow">⇅</span></th>
@@ -574,7 +568,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
               </tr>
             </thead>
             <tbody id="edc-tbody">
-              <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">⏳</div><p>載入中…</p></div></td></tr>
+              <tr><td colspan="12"><div class="empty-state"><div class="empty-icon">⏳</div><p>載入中…</p></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -1888,28 +1882,24 @@ window.renderEDC = async function() {
   document.getElementById('edc-count').textContent = `共 ${filtered.length} 筆`;
   const tbody = document.getElementById('edc-tbody');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🔗</div><p>無符合條件的關聯資料</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">🔗</div><p>無符合條件的關聯資料</p></div></td></tr>`;
     return;
   }
 
+  const tidChip = val => val
+    ? `<span class="tid-chip">${val}</span>`
+    : `<span style="color:var(--text-muted)">—</span>`;
+
   tbody.innerHTML = filtered.map(r => {
     const hw = edcHwList.find(h => h.tid === r.tid) || {};
-    const chip = (val) => val
-      ? `<span class="tid-chip muted">${val}</span>`
-      : '';
-
     return `<tr>
       <td><strong>${r.pos_machine_no||'—'}</strong></td>
       <td>${r.special_purpose||'—'}</td>
-      <td>
-        <div class="tid-wrap">
-          <span class="tid-chip main">${r.tid||'—'}</span>
-          ${chip(hw.bonus_tid)}
-          ${chip(hw.installment_tid)}
-          ${chip(hw.unionpay_tid)}
-          ${chip(hw.ae_tid)}
-        </div>
-      </td>
+      <td>${tidChip(r.tid)}</td>
+      <td>${tidChip(hw.bonus_tid)}</td>
+      <td>${tidChip(hw.installment_tid)}</td>
+      <td>${tidChip(hw.unionpay_tid)}</td>
+      <td>${tidChip(hw.ae_tid)}</td>
       <td>${fmtDate(r.start_date)}</td>
       <td>${fmtDate(r.end_date)}</td>
       <td>${statusBadge(r.status)}</td>
