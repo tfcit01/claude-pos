@@ -172,6 +172,8 @@ tr:hover td { background: #FAFBFC; }
   font-size: 11px; font-weight: 500; white-space: nowrap;
 }
 .badge-active    { background: #E6F4EC; color: #1A6638; }
+.badge-enabled   { background: #D4EDDA; color: #155724; font-weight:600; }
+.badge-disabled-red { background: #F8D7DA; color: #721C24; font-weight:600; }
 .badge-stock     { background: #E8F0FC; color: #1A45A0; }
 .badge-repair    { background: #FFF3E0; color: #8C4A00; }
 .badge-retire    { background: #FCE8E8; color: #902020; }
@@ -255,8 +257,8 @@ textarea.form-control { resize: vertical; min-height: 72px; }
   text-transform: none; display: block; margin-top: 1px;
 }
 .edc-table .tid-chip {
-  font-family: monospace; font-size: 13px;
-  background: #f0f2f5; padding: 2px 7px;
+  font-family: var(--font); font-size: 14px;
+  background: #FFF9D6; padding: 2px 7px;
   border-radius: 4px; display: inline-block;
   color: var(--text-pri); white-space: nowrap;
 }
@@ -557,6 +559,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <thead>
               <tr>
                 <th data-key="pos_machine_no" onclick="sortEDCTable('pos_machine_no')">POS機號<span class="sort-arrow">⇅</span></th>
+                <th data-key="booth_name" onclick="sortEDCTable('booth_name')">櫃名<span class="sort-arrow">⇅</span></th>
                 <th data-key="tid" onclick="sortEDCTable('tid')">TID<span class="sort-arrow">⇅</span></th>
                 <th>紅利</th>
                 <th>分期</th>
@@ -571,7 +574,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
               </tr>
             </thead>
             <tbody id="edc-tbody">
-              <tr><td colspan="12"><div class="empty-state"><div class="empty-icon">⏳</div><p>載入中…</p></div></td></tr>
+              <tr><td colspan="13"><div class="empty-state"><div class="empty-icon">⏳</div><p>載入中…</p></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -1735,6 +1738,7 @@ window.showPage = function(name) {
 function statusBadge(s) {
   const map = {
     '使用中': 'badge-active', '庫存': 'badge-stock', '備機': 'badge-standby', '借出': 'badge-standby',
+    '啟用': 'badge-enabled', '停用': 'badge-disabled-red',
     '維修中': 'badge-repair', '待報廢': 'badge-pending', '已報廢': 'badge-retire',
     '待退回': 'badge-pending', '已退回': 'badge-retire',
     '停用': 'badge-disabled', '遺失': 'badge-retire', '調撥中': 'badge-transfer', '驗收中': 'badge-transfer'
@@ -1949,6 +1953,7 @@ window.sortEDCTable = function(key) {
 window.renderEDC = async function() {
   const list = await getData('edc');
   const edcHwList = await getData('edchw');
+  const posList = await getData('pos');  // 查詢 POS 主檔取得櫃名
   const search = document.getElementById('edc-search').value.toLowerCase();
   const status = document.getElementById('edc-status-filter').value;
 
@@ -1957,19 +1962,24 @@ window.renderEDC = async function() {
     return (!search || s.includes(search)) && (!status || r.status === status);
   });
 
-  // 套用排序
+  // 套用排序（支援 booth_name 需先 join POS 資料）
   if (edcSortKey) {
+    filtered = filtered.map(r => {
+      const pos = posList.find(p => p.machine_no === r.pos_machine_no) || {};
+      return { ...r, _booth_name: pos.booth_name || '' };
+    });
     filtered.sort((a, b) => {
-      const va = String(a[edcSortKey] || '');
-      const vb = String(b[edcSortKey] || '');
-      return edcSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+      const key = edcSortKey === 'booth_name' ? '_booth_name' : edcSortKey;
+      const va = String(a[key] || '');
+      const vb = String(b[key] || '');
+      return edcSortAsc ? va.localeCompare(vb, 'zh-Hant') : vb.localeCompare(va, 'zh-Hant');
     });
   }
 
   document.getElementById('edc-count').textContent = `共 ${filtered.length} 筆`;
   const tbody = document.getElementById('edc-tbody');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">🔗</div><p>無符合條件的關聯資料</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13"><div class="empty-state"><div class="empty-icon">🔗</div><p>無符合條件的關聯資料</p></div></td></tr>`;
     return;
   }
 
@@ -1979,8 +1989,10 @@ window.renderEDC = async function() {
 
   tbody.innerHTML = filtered.map(r => {
     const hw = edcHwList.find(h => h.tid === r.tid) || {};
+    const pos = posList.find(p => p.machine_no === r.pos_machine_no) || {};
     return `<tr>
       <td><strong>${r.pos_machine_no||'—'}</strong></td>
+      <td>${pos.booth_name||'—'}</td>
       <td>${tidChip(r.tid)}</td>
       <td>${tidChip(hw.bonus_tid)}</td>
       <td>${tidChip(hw.installment_tid)}</td>
