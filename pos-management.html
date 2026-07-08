@@ -424,7 +424,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v1.7 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v1.8 · 模擬系統</div>
   </div>
 </nav>
 
@@ -474,29 +474,33 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       </div>
 
       <!-- 硬體設備使用狀況 -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header">
-          <span>🔌</span>
-          <span class="card-title">硬體設備使用狀況</span>
-        </div>
-        <div class="card-body" id="dashboard-peri-stats" style="padding:14px 20px">
-          <div class="empty-state"><div class="empty-icon">📭</div><p>尚無資料</p></div>
-        </div>
-      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:0">
+        <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+          <div class="card">
+            <div class="card-header">
+              <span>🔌</span>
+              <span class="card-title">硬體設備使用狀況</span>
+            </div>
+            <div class="card-body" id="dashboard-peri-stats" style="padding:14px 20px">
+              <div class="empty-state"><div class="empty-icon">📭</div><p>尚無資料</p></div>
+            </div>
+          </div>
 
-      <!-- 大樓構圖 + 最近異動 -->
-      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px">
-        <div class="card">
-          <div class="card-header">
-            <span>🏢</span>
-            <span class="card-title">台北101 設備分佈</span>
-            <span class="card-actions" style="font-size:11px;color:var(--text-muted)">使用中 POS 數量</span>
-          </div>
-          <div class="card-body" style="padding:16px 20px">
-            <div id="dashboard-building-map"></div>
+          <!-- 台北101設備分佈 -->
+          <div class="card">
+            <div class="card-header">
+              <span>🏢</span>
+              <span class="card-title">台北101 設備分佈</span>
+              <span class="card-actions" style="font-size:11px;color:var(--text-muted)">使用中 POS 數量</span>
+            </div>
+            <div class="card-body" style="padding:16px 20px">
+              <div id="dashboard-building-map"></div>
+            </div>
           </div>
         </div>
-        <div class="card">
+
+        <!-- 最近異動紀錄（右側固定 1/3） -->
+        <div class="card" style="min-width:0">
           <div class="card-header">
             <span>🕐</span>
             <span class="card-title">最近異動紀錄</span>
@@ -1827,31 +1831,42 @@ async function refreshDashboard() {
     const statusColor = { '使用中':'#2E8B57', '庫存':'#2060A8', '借出':'#6040A0', '維修中':'#C07010', '已報廢':'#B03030' };
 
     let html = `
-    <div style="display:grid;grid-template-columns:auto 1fr auto auto auto auto auto;gap:6px 16px;align-items:center;margin-bottom:14px">
-      <div style="font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase;grid-column:1/-1;border-bottom:1px solid var(--border);padding-bottom:6px;display:grid;grid-template-columns:auto 1fr auto auto auto auto auto;gap:0 16px">
-        <span>設備類型</span><span></span>
-        <span style="text-align:right">使用中</span>
-        <span style="text-align:right">庫存</span>
-        <span style="text-align:right">借出</span>
-        <span style="text-align:right">維修中</span>
-        <span style="text-align:right">總計</span>
-      </div>`;
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:4px 8px 6px 0;font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap">設備類型</th>
+          <th style="padding:4px 0 6px 8px;min-width:80px"></th>
+          <th style="text-align:right;padding:4px 8px 6px;font-size:11px;font-weight:600;color:#2E8B57;white-space:nowrap">使用中</th>
+          <th style="text-align:right;padding:4px 8px 6px;font-size:11px;font-weight:600;color:#2060A8;white-space:nowrap">庫存</th>
+          <th style="text-align:right;padding:4px 8px 6px;font-size:11px;font-weight:600;color:#6040A0;white-space:nowrap">借出</th>
+          <th style="text-align:right;padding:4px 8px 6px;font-size:11px;font-weight:600;color:#C07010;white-space:nowrap">維修中</th>
+          <th style="text-align:right;padding:4px 0 6px 8px;font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap">總計</th>
+        </tr>
+      </thead>
+      <tbody>`;
 
     Object.entries(byType).sort((a,b)=>b[1].total-a[1].total).forEach(([type, s]) => {
       const pct = s.total ? Math.round(s.inuse/s.total*100) : 0;
       html += `
-      <span style="font-size:13px;white-space:nowrap;color:var(--text-pri)">${type}</span>
-      <div style="height:8px;background:#F0F2F5;border-radius:4px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:#2E8B57;border-radius:4px;transition:width .4s"></div>
-      </div>
-      <span style="font-size:13px;text-align:right;color:#2E8B57;font-weight:500">${s.inuse}</span>
-      <span style="font-size:13px;text-align:right;color:#2060A8">${s.stock}</span>
-      <span style="font-size:13px;text-align:right;color:#6040A0">${s.loan||0}</span>
-      <span style="font-size:13px;text-align:right;color:#C07010">${s.repair}</span>
-      <span style="font-size:13px;text-align:right;color:var(--text-muted)">${s.total}</span>`;
+        <tr>
+          <td style="padding:5px 8px 5px 0;font-size:13px;white-space:nowrap;color:var(--text-pri)">${type}</td>
+          <td style="padding:5px 8px">
+            <div style="height:7px;background:#F0F2F5;border-radius:4px;overflow:hidden;min-width:60px">
+              <div style="height:100%;width:${pct}%;background:#2E8B57;border-radius:4px"></div>
+            </div>
+          </td>
+          <td style="text-align:right;padding:5px 8px;font-size:13px;color:#2E8B57;font-weight:500">${s.inuse}</td>
+          <td style="text-align:right;padding:5px 8px;font-size:13px;color:#2060A8">${s.stock}</td>
+          <td style="text-align:right;padding:5px 8px;font-size:13px;color:#6040A0">${s.loan||0}</td>
+          <td style="text-align:right;padding:5px 8px;font-size:13px;color:#C07010">${s.repair}</td>
+          <td style="text-align:right;padding:5px 0 5px 8px;font-size:13px;color:var(--text-muted)">${s.total}</td>
+        </tr>`;
     });
 
-    html += `</div>
+    html += `</tbody></table>`;
+    });
+
+    html += `</tbody></table>
     <div style="display:flex;gap:24px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap">
       <div style="text-align:center">
         <div style="font-size:24px;font-weight:700;color:#2E8B57">${inUsePeri}</div>
@@ -1920,12 +1935,12 @@ function renderBuildingMap(posList) {
     const bg = n ? color : 'rgba(255,255,255,0.7)';
     const fg = n ? '#fff' : '#666';
     const brd = color;
-    return `<span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:${n?'600':'400'};background:${bg};color:${fg};border:1px solid ${brd};white-space:nowrap">${lbl(floor)}</span>`;
+    return `<span style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:13px;font-weight:${n?'600':'400'};background:${bg};color:${fg};border:1px solid ${brd};white-space:nowrap">${lbl(floor)}</span>`;
   };
 
-  const row = (label, floor, color, extra='') => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 0">
-      <span style="font-size:11px;color:#444;min-width:32px">${label}</span>
+  const row = (label, floor, color) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0">
+      <span style="font-size:13px;color:#444;min-width:36px">${label}</span>
       ${pill(floor, color)}
     </div>`;
 
@@ -1936,7 +1951,7 @@ function renderBuildingMap(posList) {
 
     <!-- 購物中心欄 -->
     <div style="min-width:100px">
-      <div style="font-size:11px;font-weight:700;color:#0c5c38;letter-spacing:.04em;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid #2e9e6a">購物中心</div>
+      <div style="font-size:13px;font-weight:700;color:#0c5c38;letter-spacing:.04em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #2e9e6a">購物中心</div>
       ${row('6F','06',mc)}
       ${row('5F','05',mc)}
       ${row('4F','04',mc)}
@@ -1949,12 +1964,12 @@ function renderBuildingMap(posList) {
 
     <!-- 台北101圖片 -->
     <div style="flex:1;display:flex;justify-content:center">
-      <img src="${IMG}" alt="台北101建築外觀" style="max-height:380px;object-fit:contain;opacity:0.92;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.15))">
+      <img src="${IMG}" alt="台北101建築外觀" style="max-height:360px;object-fit:contain;-webkit-mask-image:radial-gradient(ellipse 85% 90% at 50% 50%,#000 60%,transparent 100%);mask-image:radial-gradient(ellipse 85% 90% at 50% 50%,#000 60%,transparent 100%)">
     </div>
 
     <!-- 大樓欄 -->
     <div style="min-width:108px">
-      <div style="font-size:11px;font-weight:700;color:#0c2a5c;letter-spacing:.04em;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid #1e5fa0">大樓</div>
+      <div style="font-size:13px;font-weight:700;color:#0c2a5c;letter-spacing:.04em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #1e5fa0">大樓</div>
       ${row('89F','89',bc)}
       ${row('88F','88',bc)}
       ${row('86F','86',bc)}
