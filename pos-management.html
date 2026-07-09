@@ -424,7 +424,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.0 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.1 · 模擬系統</div>
   </div>
 </nav>
 
@@ -1968,7 +1968,14 @@ function renderBuildingMap(posList) {
     <!-- 購物中心欄：靠右對齊（貼近圖片） -->
     <div style="flex:1;display:flex;flex-direction:column;align-items:flex-end;padding-right:12px">
       <div style="font-size:13px;font-weight:700;color:#0c5c38;letter-spacing:.04em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #2e9e6a;align-self:stretch;text-align:right">購物中心</div>
-      ${['6F','06',mc,'5F','05',mc,'4F','04',mc,'3F','03',mc,'2F','02',mc,'1F','01',mc,'B1F','B1',mc,'B2F','B2',mc].reduce((html,_,i,arr)=>i%3===0?html+row(arr[i],arr[i+1],arr[i+2]):html,'')}
+      ${row('6F','06',mc)}
+      ${row('5F','05',mc)}
+      ${row('4F','04',mc)}
+      ${row('3F','03',mc)}
+      ${row('2F','02',mc)}
+      ${row('1F','01',mc)}
+      ${row('B1F','B1',mc)}
+      ${row('B2F','B2',mc)}
     </div>
 
     <!-- 台北101圖片：中央 -->
@@ -1979,7 +1986,10 @@ function renderBuildingMap(posList) {
     <!-- 大樓欄：靠左對齊（貼近圖片） -->
     <div style="flex:1;display:flex;flex-direction:column;align-items:flex-start;padding-left:12px">
       <div style="font-size:13px;font-weight:700;color:#0c2a5c;letter-spacing:.04em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #1e5fa0;align-self:stretch">大樓</div>
-      ${['89F','89',bc,'88F','88',bc,'86F','86',bc,'85F','85',bc].reduce((html,_,i,arr)=>i%3===0?html+row(arr[i],arr[i+1],arr[i+2]):html,'')}
+      ${row('89F','89',bc)}
+      ${row('88F','88',bc)}
+      ${row('86F','86',bc)}
+      ${row('85F','85',bc)}
       <div style="height:8px"></div>
       ${row('35F','35',bc)}
       <div style="height:8px"></div>
