@@ -424,7 +424,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.4 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.5 · 模擬系統</div>
   </div>
 </nav>
 
@@ -1840,8 +1840,8 @@ async function refreshDashboard() {
   const cfg = loadFBConfig();
   document.getElementById('config-warning').style.display = cfg ? 'none' : 'flex';
 
-  const [posList, edcList, periList, logList] = await Promise.all([
-    getData('pos'), getData('edc'), getData('peri'), getData('log')
+  const [posList, edcList, periList, logList, edchwList] = await Promise.all([
+    getData('pos'), getData('edc'), getData('peri'), getData('log'), getData('edchw')
   ]);
 
   // ── 統計數字 ──
@@ -1855,94 +1855,122 @@ async function refreshDashboard() {
 
   // ── 硬體設備使用狀況 ──
   const periStatsEl = document.getElementById('dashboard-peri-stats');
-  if (periList.length === 0) {
-    periStatsEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>尚無硬體設備資料</p></div>';
-  } else {
-    const totalPeri = periList.length;
-    const inUsePeri = periList.filter(p => p.status === '使用中').length;
-    const stockPeri = periList.filter(p => p.status === '庫存').length;
-    const repairPeri = periList.filter(p => p.status === '維修中').length;
-    const loanPeri = periList.filter(p => p.status === '借出').length;
-    const retiredPeri = periList.filter(p => p.status === '已報廢').length;
-    const inUsePct = totalPeri ? Math.round(inUsePeri/totalPeri*100) : 0;
-    const stockPct = totalPeri ? Math.round(stockPeri/totalPeri*100) : 0;
 
-    // 依設備類型分組統計
-    const byType = {};
-    periList.forEach(p => {
-      const t = p.dev_type || '其他';
-      if (!byType[t]) byType[t] = { total:0, inuse:0, stock:0, repair:0, loan:0 };
-      byType[t].total++;
-      if (p.status==='使用中') byType[t].inuse++;
-      else if (p.status==='庫存') byType[t].stock++;
-      else if (p.status==='維修中') byType[t].repair++;
-      else if (p.status==='借出') byType[t].loan++;
-    });
+  // 僅取「正式機」EDC（purpose === '正式機'）
+  const formalEDC = edchwList.filter(e => (e.purpose || '正式機') === '正式機');
+  // POS 硬體設備（peri）全部納入
+  const formalPeri = periList;
 
-    const statusColor = { '使用中':'#2E8B57', '庫存':'#2060A8', '借出':'#6040A0', '維修中':'#C07010', '已報廢':'#B03030' };
+  // 統計函式
+  const statRow = (list) => ({
+    total:  list.length,
+    inuse:  list.filter(x => x.status === '使用中').length,
+    stock:  list.filter(x => x.status === '庫存').length,
+    loan:   list.filter(x => x.status === '借出').length,
+    repair: list.filter(x => x.status === '維修中').length,
+    retire: list.filter(x => x.status === '已報廢').length,
+  });
 
-    let html = `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
-      <thead>
-        <tr style="border-bottom:1px solid var(--border)">
-          <th style="text-align:left;padding:4px 8px 6px 0;font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap">設備類型</th>
-          <th style="padding:4px 0 6px 8px;min-width:80px"></th>
-          <th style="text-align:right;padding:4px 8px 6px;font-size:11px;font-weight:600;color:#2E8B57;white-space:nowrap">使用中</th>
-          <th style="text-align:right;padding:4px 8px 6px;font-size:11px;font-weight:600;color:#2060A8;white-space:nowrap">庫存</th>
-          <th style="text-align:right;padding:4px 8px 6px;font-size:11px;font-weight:600;color:#6040A0;white-space:nowrap">借出</th>
-          <th style="text-align:right;padding:4px 8px 6px;font-size:11px;font-weight:600;color:#C07010;white-space:nowrap">維修中</th>
-          <th style="text-align:right;padding:4px 0 6px 8px;font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap">總計</th>
-        </tr>
-      </thead>
-      <tbody>`;
+  // 建立分組結構
+  const groups = [];
 
-    Object.entries(byType).sort((a,b)=>b[1].total-a[1].total).forEach(([type, s]) => {
-      const pct = s.total ? Math.round(s.inuse/s.total*100) : 0;
-      html += `
-        <tr>
-          <td style="padding:5px 8px 5px 0;font-size:13px;white-space:nowrap;color:var(--text-pri)">${type}</td>
-          <td style="padding:5px 8px">
-            <div style="height:7px;background:#F0F2F5;border-radius:4px;overflow:hidden;min-width:60px">
-              <div style="height:100%;width:${pct}%;background:#2E8B57;border-radius:4px"></div>
-            </div>
-          </td>
-          <td style="text-align:right;padding:5px 8px;font-size:13px;color:#2E8B57;font-weight:500">${s.inuse}</td>
-          <td style="text-align:right;padding:5px 8px;font-size:13px;color:#2060A8">${s.stock}</td>
-          <td style="text-align:right;padding:5px 8px;font-size:13px;color:#6040A0">${s.loan||0}</td>
-          <td style="text-align:right;padding:5px 8px;font-size:13px;color:#C07010">${s.repair}</td>
-          <td style="text-align:right;padding:5px 0 5px 8px;font-size:13px;color:var(--text-muted)">${s.total}</td>
-        </tr>`;
-    });
+  // 1. POS硬體設備（非POS主機的設備類型）
+  const periTypes = [...new Set(formalPeri.map(p => p.dev_type || '其他'))];
+  periTypes.sort().forEach(t => {
+    const items = formalPeri.filter(p => (p.dev_type || '其他') === t);
+    if (t === 'POS主機') {
+      // POS主機 → 依機型細分
+      const models = [...new Set(items.map(p => p.model_no || '未知'))];
+      models.sort().forEach(m => {
+        const sub = items.filter(p => (p.model_no || '未知') === m);
+        groups.push({ label: `POS主機 · ${m}`, indent: true, ...statRow(sub) });
+      });
+    } else {
+      groups.push({ label: t, indent: false, ...statRow(items) });
+    }
+  });
 
-    html += `</tbody></table>
-    <div style="display:flex;gap:24px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap">
-      <div style="text-align:center">
-        <div style="font-size:24px;font-weight:700;color:#2E8B57">${inUsePeri}</div>
-        <div style="font-size:11px;color:var(--text-muted)">使用中 (${inUsePct}%)</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:24px;font-weight:700;color:#2060A8">${stockPeri}</div>
-        <div style="font-size:11px;color:var(--text-muted)">庫存 (${stockPct}%)</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:24px;font-weight:700;color:#6040A0">${loanPeri}</div>
-        <div style="font-size:11px;color:var(--text-muted)">借出</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:24px;font-weight:700;color:#C07010">${repairPeri}</div>
-        <div style="font-size:11px;color:var(--text-muted)">維修中</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:24px;font-weight:700;color:#B03030">${retiredPeri}</div>
-        <div style="font-size:11px;color:var(--text-muted)">已報廢</div>
-      </div>
-      <div style="text-align:center;margin-left:auto">
-        <div style="font-size:24px;font-weight:700;color:var(--text-pri)">${totalPeri}</div>
-        <div style="font-size:11px;color:var(--text-muted)">設備總量</div>
-      </div>
-    </div>`;
-    periStatsEl.innerHTML = html;
+  // 2. EDC刷卡機（中信 / 聯信）
+  const edcChixin  = formalEDC.filter(e => e.acquirer_bank === '中信');
+  const edcLianxin = formalEDC.filter(e => e.acquirer_bank === '聯信');
+  if (formalEDC.length > 0) {
+    if (edcChixin.length > 0)
+      groups.push({ label: 'EDC刷卡機 · 中信', indent: true, ...statRow(edcChixin) });
+    if (edcLianxin.length > 0)
+      groups.push({ label: 'EDC刷卡機 · 聯信', indent: true, ...statRow(edcLianxin) });
+    // 若有既非中信也非聯信的
+    const edcOther = formalEDC.filter(e => e.acquirer_bank !== '中信' && e.acquirer_bank !== '聯信');
+    if (edcOther.length > 0)
+      groups.push({ label: 'EDC刷卡機 · 其他', indent: true, ...statRow(edcOther) });
   }
+
+  // 整體合計
+  const allItems = [...formalPeri, ...formalEDC];
+  const totals = statRow(allItems);
+
+  const tdR = (val, color) => `<td style="text-align:right;padding:5px 8px;font-size:13px;color:${color};font-weight:500">${val||0}</td>`;
+
+  let html = `
+  <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
+    <thead>
+      <tr style="border-bottom:2px solid var(--border)">
+        <th style="text-align:left;padding:4px 8px 7px 0;font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap">設備類型 / 機型</th>
+        <th style="padding:4px 0 7px 8px;min-width:70px"></th>
+        <th style="text-align:right;padding:4px 8px 7px;font-size:11px;font-weight:600;color:#2E8B57;white-space:nowrap">使用中</th>
+        <th style="text-align:right;padding:4px 8px 7px;font-size:11px;font-weight:600;color:#2060A8;white-space:nowrap">庫存</th>
+        <th style="text-align:right;padding:4px 8px 7px;font-size:11px;font-weight:600;color:#6040A0;white-space:nowrap">借出</th>
+        <th style="text-align:right;padding:4px 8px 7px;font-size:11px;font-weight:600;color:#C07010;white-space:nowrap">維修中</th>
+        <th style="text-align:right;padding:4px 0 7px 8px;font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap">總計</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  groups.forEach(g => {
+    const pct = g.total ? Math.round(g.inuse / g.total * 100) : 0;
+    const labelStyle = g.indent
+      ? 'padding:4px 8px 4px 16px;font-size:12px;color:var(--text-sec);white-space:nowrap'
+      : 'padding:5px 8px 5px 0;font-size:13px;font-weight:600;color:var(--text-pri);white-space:nowrap';
+    html += `<tr style="border-bottom:1px solid #F4F5F7">
+      <td style="${labelStyle}">${g.indent ? '└ ' : ''}${g.label}</td>
+      <td style="padding:4px 8px">
+        <div style="height:6px;background:#F0F2F5;border-radius:3px;overflow:hidden;min-width:50px">
+          <div style="height:100%;width:${pct}%;background:#2E8B57;border-radius:3px"></div>
+        </div>
+      </td>
+      ${tdR(g.inuse,'#2E8B57')}
+      ${tdR(g.stock,'#2060A8')}
+      ${tdR(g.loan,'#6040A0')}
+      ${tdR(g.repair,'#C07010')}
+      ${tdR(g.total,'var(--text-muted)')}
+    </tr>`;
+  });
+
+  // 合計列
+  const totPct = totals.total ? Math.round(totals.inuse/totals.total*100) : 0;
+  html += `<tr style="border-top:2px solid var(--border);background:#F8F9FB">
+    <td style="padding:6px 8px 6px 0;font-size:13px;font-weight:700;color:var(--text-pri)">合計</td>
+    <td style="padding:6px 8px">
+      <div style="height:7px;background:#E0E3E8;border-radius:3px;overflow:hidden;min-width:50px">
+        <div style="height:100%;width:${totPct}%;background:#2E8B57;border-radius:3px"></div>
+      </div>
+    </td>
+    ${tdR(totals.inuse,'#2E8B57')}
+    ${tdR(totals.stock,'#2060A8')}
+    ${tdR(totals.loan,'#6040A0')}
+    ${tdR(totals.repair,'#C07010')}
+    <td style="text-align:right;padding:6px 0 6px 8px;font-size:13px;font-weight:700;color:var(--text-pri)">${totals.total}</td>
+  </tr>`;
+
+  html += `</tbody></table>
+  <div style="display:flex;gap:20px;padding-top:10px;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center">
+    <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#2E8B57">${totals.inuse}</div><div style="font-size:11px;color:var(--text-muted)">使用中 (${totPct}%)</div></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#2060A8">${totals.stock}</div><div style="font-size:11px;color:var(--text-muted)">庫存</div></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#6040A0">${totals.loan}</div><div style="font-size:11px;color:var(--text-muted)">借出</div></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#C07010">${totals.repair}</div><div style="font-size:11px;color:var(--text-muted)">維修中</div></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#B03030">${totals.retire}</div><div style="font-size:11px;color:var(--text-muted)">已報廢</div></div>
+    <div style="text-align:center;margin-left:auto"><div style="font-size:22px;font-weight:700;color:var(--text-pri)">${totals.total}</div><div style="font-size:11px;color:var(--text-muted)">設備總量</div></div>
+  </div>`;
+  periStatsEl.innerHTML = html;
 
   // ── 大樓構圖 ──
   renderBuildingMap(posList);
