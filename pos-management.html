@@ -236,6 +236,20 @@ textarea.form-control { resize: vertical; min-height: 72px; }
   display: flex; gap: 8px; justify-content: flex-end;
 }
 
+/* ── 全域數字標籤（機號/TID/MID/IP/資產編號等） ── */
+.num-chip {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  background: #FFF9D6;
+  color: var(--text-pri);
+  padding: 2px 8px;
+  border-radius: 5px;
+  display: inline-block;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+
 /* ── POS-EDC 關聯表格：統一字體、粗體表頭、排序支援 ── */
 .edc-table { font-size: 14px; }
 .edc-table th {
@@ -260,10 +274,12 @@ textarea.form-control { resize: vertical; min-height: 72px; }
   text-transform: none; display: block; margin-top: 1px;
 }
 .edc-table .tid-chip {
-  font-family: var(--font); font-size: 14px;
-  background: #FFF9D6; padding: 2px 7px;
-  border-radius: 4px; display: inline-block;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px; font-weight: 600;
+  background: #FFF9D6; padding: 2px 8px;
+  border-radius: 5px; display: inline-block;
   color: var(--text-pri); white-space: nowrap;
+  letter-spacing: 0.03em;
 }
 .edc-table .status-date { white-space: nowrap; }
 .modal-body-pos { padding: 14px 18px 10px; }
@@ -424,7 +440,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.7 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.8 · 模擬系統</div>
   </div>
 </nav>
 
@@ -441,7 +457,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
     <div class="page active" id="page-dashboard">
       <div id="config-warning" class="config-banner" style="display:none">
         ⚠️ Firebase 尚未設定。請前往 <strong>Firebase 設定</strong> 頁面輸入您的專案設定，資料才能正常讀寫。<br>
-        設定完成前，系統將使用 <code>LocalStorage</code> 暫存示範資料。
+        設定完成前，系統將使用 <code>LocalStorage</span> 暫存示範資料。
       </div>
 
       <!-- 統計數字列 -->
@@ -734,7 +750,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
         <div class="card-body">
           <div class="config-banner">
             📌 請至 <strong>Firebase Console → 專案設定 → 您的應用程式</strong> 取得設定值，填入下方欄位後按「儲存並連線」。<br><br>
-            若未設定，系統將以 <code>LocalStorage</code> 在瀏覽器本機暫存資料（重新整理後保留，清除瀏覽器快取後消失）。
+            若未設定，系統將以 <code>LocalStorage</span> 在瀏覽器本機暫存資料（重新整理後保留，清除瀏覽器快取後消失）。
           </div>
           <div class="form-grid" style="gap:12px">
             <div class="form-group">
@@ -2131,12 +2147,12 @@ window.renderPOS = async function() {
   }
   tbody.innerHTML = filtered.map(r => `
     <tr>
-      <td><strong>${r.machine_no||'—'}</strong></td>
+      <td><span class="num-chip">${r.machine_no||'—'}</span></td>
       <td>${r.model||'—'}</td>
       <td>${r.floor||'—'}</td>
       <td>${r.booth_no||'—'}</td>
       <td>${r.booth_name||'—'}</td>
-      <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.ip_addr||'—'}</code></td>
+      <td><span class="num-chip">${r.ip_addr||'—'}</span></td>
       <td>${statusBadge(r.status)}</td>
       <td>${r.is_central_collect==='true'||r.is_central_collect===true ? '✅' : '—'}</td>
       <td>${fmtDate(r.start_date)}</td>
@@ -2208,7 +2224,7 @@ window.openEDCLogModal = async function(recordId, posMachineNo, tid) {
     html += `<tr style="border-bottom:1px solid #F0F2F5">
       <td style="padding:9px 14px;white-space:nowrap;font-size:12px;color:var(--text-muted)">${fmtTime(l.createdAt)}</td>
       <td style="padding:9px 14px">${actionLabel[l.change_type]||l.change_type}</td>
-      <td style="padding:9px 14px"><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${l.entity_key||'—'}</code></td>
+      <td style="padding:9px 14px"><span class="num-chip">${l.entity_key||'—'}</span></td>
       <td style="padding:9px 14px;font-size:12px;color:var(--text-sec);max-width:260px">${detail}</td>
       <td style="padding:9px 14px;font-size:12px">${l.operator||'系統'}</td>
     </tr>`;
@@ -2280,7 +2296,7 @@ window.renderEDC = async function() {
     const hw = edcHwList.find(h => h.tid === r.tid) || {};
     const pos = posList.find(p => p.machine_no === r.pos_machine_no) || {};
     return `<tr>
-      <td><strong>${r.pos_machine_no||'—'}</strong></td>
+      <td><span class="num-chip">${r.pos_machine_no||'—'}</span></td>
       <td>${pos.booth_name||'—'}</td>
       <td>${tidChip(r.tid)}</td>
       <td>${tidChip(hw.bonus_tid)}</td>
@@ -2323,7 +2339,7 @@ window.renderPeri = async function() {
   }
   tbody.innerHTML = filtered.map(r => `
     <tr>
-      <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.asset_no||'—'}</code></td>
+      <td><span class="num-chip">${r.asset_no||'—'}</span></td>
       <td>${r.dev_type||'—'}</td>
       <td>${r.model_no||'—'}</td>
       <td>${r.brand||'—'}</td>
@@ -2361,9 +2377,9 @@ window.renderEDCHW = async function() {
       <td>${r.purpose||'—'}</td>
       <td>${r.model||'—'}</td>
       <td>${r.acquirer_bank||'—'}</td>
-      <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.mid||'—'}</code>${r.mid && MID_LABEL[r.mid] ? `<span style="font-size:11px;color:var(--text-muted);margin-left:4px">（${MID_LABEL[r.mid]}）</span>` : ''}</td>
-      <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.tid||'—'}</code></td>
-      <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.ip_addr||'—'}</code></td>
+      <td><span class="num-chip">${r.mid||'—'}</span>${r.mid && MID_LABEL[r.mid] ? `<span style="font-size:11px;color:var(--text-muted);margin-left:4px">（${MID_LABEL[r.mid]}）</span>` : ''}</td>
+      <td><span class="num-chip">${r.tid||'—'}</span></td>
+      <td><span class="num-chip">${r.ip_addr||'—'}</span></td>
       <td>${statusBadge(r.status)}</td>
       <td>${fmtDate(r.inbound_date)}</td>
       <td>${fmtDate(r.change_date)}</td>
@@ -2398,7 +2414,7 @@ window.renderLog = async function() {
     <tr>
       <td style="white-space:nowrap;font-size:12px">${fmtTime(r.createdAt)}</td>
       <td><span class="badge badge-stock">${typeLabel[r.entity_type]||r.entity_type}</span></td>
-      <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.entity_key||'—'}</code></td>
+      <td><span class="num-chip">${r.entity_key||'—'}</span></td>
       <td>${actionLabel[r.change_type]||r.change_type}</td>
       <td style="max-width:200px;font-size:12px;color:var(--text-sec)">${r.change_reason||'—'}</td>
       <td style="font-size:12px">${r.operator||'系統'}</td>
