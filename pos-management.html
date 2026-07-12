@@ -424,7 +424,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.1 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.2 · 模擬系統</div>
   </div>
 </nav>
 
@@ -1947,16 +1947,25 @@ function renderBuildingMap(posList) {
     const m = floorModels[floor];
     if (!m) return '';
     return Object.entries(m)
-      .map(([model, cnt]) => `<span style="font-size:10px;color:#555;white-space:nowrap">${model}:${cnt}</span>`)
+      .map(([model, cnt]) => `<span style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;white-space:nowrap">${model}:${cnt}</span>`)
       .join(' ');
   };
 
-  const row = (label, floor, color) => {
+  const mallRow = (label, floor) => {
     const tags = modelTag(floor);
-    return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;flex-wrap:nowrap">
-      <span style="font-size:13px;color:#444;min-width:36px;white-space:nowrap">${label}</span>
-      ${pill(floor, color)}
-      ${tags ? `<span style="display:flex;gap:4px;flex-wrap:wrap">${tags}</span>` : ''}
+    return `<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:3px 0;flex-wrap:wrap">
+      ${tags ? `<div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end">${tags}</div>` : ''}
+      ${pill(floor, mc)}
+      <span style="font-size:13px;color:#444;min-width:36px;text-align:right">${label}</span>
+    </div>`;
+  };
+
+  const bldRow = (label, floor) => {
+    const tags = modelTag(floor);
+    return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;flex-wrap:wrap">
+      <span style="font-size:13px;color:#444;min-width:36px">${label}</span>
+      ${pill(floor, bc)}
+      ${tags ? `<div style="display:flex;gap:3px;flex-wrap:wrap">${tags}</div>` : ''}
     </div>`;
   };
 
@@ -1965,17 +1974,17 @@ function renderBuildingMap(posList) {
   el.innerHTML = `
   <div style="display:flex;gap:0;align-items:flex-start">
 
-    <!-- 購物中心欄：靠右對齊（貼近圖片） -->
-    <div style="flex:1;display:flex;flex-direction:column;align-items:flex-end;padding-right:12px">
-      <div style="font-size:13px;font-weight:700;color:#0c5c38;letter-spacing:.04em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #2e9e6a;align-self:stretch;text-align:right">購物中心</div>
-      ${row('6F','06',mc)}
-      ${row('5F','05',mc)}
-      ${row('4F','04',mc)}
-      ${row('3F','03',mc)}
-      ${row('2F','02',mc)}
-      ${row('1F','01',mc)}
-      ${row('B1F','B1',mc)}
-      ${row('B2F','B2',mc)}
+    <!-- 購物中心欄：靠右，機型標籤在左 -->
+    <div style="flex:1;min-width:0;padding-right:12px">
+      <div style="font-size:13px;font-weight:700;color:#0c5c38;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #2e9e6a;text-align:right">購物中心</div>
+      ${mallRow('6F','06')}
+      ${mallRow('5F','05')}
+      ${mallRow('4F','04')}
+      ${mallRow('3F','03')}
+      ${mallRow('2F','02')}
+      ${mallRow('1F','01')}
+      ${mallRow('B1F','B1')}
+      ${mallRow('B2F','B2')}
     </div>
 
     <!-- 台北101圖片：中央 -->
@@ -1983,18 +1992,18 @@ function renderBuildingMap(posList) {
       <img src="${IMG}" alt="台北101建築外觀" style="max-height:380px;object-fit:contain;-webkit-mask-image:radial-gradient(ellipse 85% 90% at 50% 50%,#000 60%,transparent 100%);mask-image:radial-gradient(ellipse 85% 90% at 50% 50%,#000 60%,transparent 100%)">
     </div>
 
-    <!-- 大樓欄：靠左對齊（貼近圖片） -->
-    <div style="flex:1;display:flex;flex-direction:column;align-items:flex-start;padding-left:12px">
-      <div style="font-size:13px;font-weight:700;color:#0c2a5c;letter-spacing:.04em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #1e5fa0;align-self:stretch">大樓</div>
-      ${row('89F','89',bc)}
-      ${row('88F','88',bc)}
-      ${row('86F','86',bc)}
-      ${row('85F','85',bc)}
+    <!-- 大樓欄：靠左，機型標籤在右 -->
+    <div style="flex:1;min-width:0;padding-left:12px">
+      <div style="font-size:13px;font-weight:700;color:#0c2a5c;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #1e5fa0">大樓</div>
+      ${bldRow('89F','89')}
+      ${bldRow('88F','88')}
+      ${bldRow('86F','86')}
+      ${bldRow('85F','85')}
       <div style="height:8px"></div>
-      ${row('35F','35',bc)}
+      ${bldRow('35F','35')}
       <div style="height:8px"></div>
-      ${row('辦公','Office',bc)}
-      ${row('觀景台','觀景台',bc)}
+      ${bldRow('辦公','Office')}
+      ${bldRow('觀景台','觀景台')}
     </div>
 
   </div>
