@@ -424,7 +424,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.2 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.4 · 模擬系統</div>
   </div>
 </nav>
 
@@ -1215,9 +1215,10 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
         <!-- 狀態 -->
         <div class="form-group">
           <label class="pos-label required">狀態</label>
-          <select class="pos-control" id="edchw-status">
+          <select class="pos-control" id="edchw-status" onchange="onEdchwStatusChange()">
             <option value="庫存" selected>庫存</option>
             <option value="使用中">使用中</option>
+            <option value="借出">借出</option>
             <option value="維修中">維修中</option>
             <option value="待退回">待退回</option>
             <option value="已退回">已退回</option>
@@ -1234,6 +1235,33 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
         <div class="form-group">
           <label class="pos-label">異動日期</label>
           <input class="pos-control" type="date" id="edchw-change_date">
+        </div>
+
+        <!-- 借出資訊（狀態=借出時顯示） -->
+        <div id="edchw-loan-section" style="display:none;grid-column:1/-1;background:#FFF9E6;border:1px solid #E8C84A;border-radius:6px;padding:12px 14px;margin-bottom:4px">
+          <div style="font-size:12px;font-weight:600;color:#8a6c00;margin-bottom:10px;letter-spacing:.03em">📋 借出資訊</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 14px">
+            <div class="form-group" style="margin:0">
+              <label class="pos-label required" id="edchw-loan-date-label">借出日期</label>
+              <input class="pos-control" type="date" id="edchw-loan_date">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label required">借用人</label>
+              <input class="pos-control" id="edchw-loan_person" placeholder="姓名或單位" maxlength="40">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label">聯絡電話</label>
+              <input class="pos-control" id="edchw-loan_phone" placeholder="分機或手機" maxlength="20" inputmode="tel">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label required">用途</label>
+              <input class="pos-control" id="edchw-loan_purpose" placeholder="借用目的說明" maxlength="80">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label">預計歸還日</label>
+              <input class="pos-control" type="date" id="edchw-loan_return_date">
+            </div>
+          </div>
         </div>
 
         <!-- 加值功能 TID -->
@@ -1529,6 +1557,21 @@ window.onLinkedTIDInput = async function(tid) {
 // ════════════════════════════════════════
 
 // 設備類型 → 對應型號清單
+// MID 對照表（商店代號 → 中文說明）
+const MID_LABEL = {
+  '0101000383': '一般',
+  '010500485':  '餐廳',
+  '011440006':  '觀景台',
+  '010500587':  '美食街',
+  '0101618526': '郵購',
+  '010100107':  '大額專用',
+  '0126900065': '自助售票',
+  '0101001295': 'LV專用',
+  '0101001301': 'LV大額專用',
+  '012690004':  '停管',
+  '101013178':  '聯信',
+};
+
 const PERI_MODEL_MAP = {
   'POS主機': ['9635', '大黑'],
   '發票機': ['EPSON-T70', 'EPSON-T82II', 'EPSON-T82III'],
@@ -1555,6 +1598,14 @@ window.onPeriDevTypeChange = function() {
 };
 
 // 狀態變動時：借出→備註需填借用者；使用中→位置需填POS機號
+// EDC刷卡機：狀態切換時顯示/隱藏借出資訊區塊
+window.onEdchwStatusChange = function() {
+  const status = document.getElementById('edchw-status').value;
+  const section = document.getElementById('edchw-loan-section');
+  if (!section) return;
+  section.style.display = status === '借出' ? 'block' : 'none';
+};
+
 window.onPeriStatusChange = function() {
   const status = document.getElementById('peri-status').value;
   const remarkLabel = document.getElementById('peri-remark-label');
@@ -2266,7 +2317,7 @@ window.renderEDCHW = async function() {
       <td>${r.purpose||'—'}</td>
       <td>${r.model||'—'}</td>
       <td>${r.acquirer_bank||'—'}</td>
-      <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.mid||'—'}</code></td>
+      <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.mid||'—'}</code>${r.mid && MID_LABEL[r.mid] ? `<span style="font-size:11px;color:var(--text-muted);margin-left:4px">（${MID_LABEL[r.mid]}）</span>` : ''}</td>
       <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.tid||'—'}</code></td>
       <td><code style="font-size:11px;background:#f4f6f8;padding:1px 5px;border-radius:3px">${r.ip_addr||'—'}</code></td>
       <td>${statusBadge(r.status)}</td>
@@ -2320,7 +2371,7 @@ const MODAL_FIELDS = {
   pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','pos_type','is_central_collect','start_date','end_date','remark'],
   edc: ['pos_machine_no','special_purpose','tid','start_date','end_date','status','status_change_date'],
   peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','remark'],
-  edchw: ['purpose','model','acquirer_bank','mid','tid','ip_addr','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark']
+  edchw: ['purpose','model','acquirer_bank','mid','tid','ip_addr','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark','loan_date','loan_person','loan_phone','loan_purpose','loan_return_date']
 };
 
 window.openModal = function(type) {
@@ -2330,7 +2381,7 @@ window.openModal = function(type) {
   const titleMap = { pos:'新增 POS 收銀機', edc:'新增 POS-EDC 關聯', peri:'新增 硬體設備', edchw:'新增 EDC 刷卡機' };
   const titleEl = document.getElementById(`modal-${type}-title`);
   if (titleEl) titleEl.textContent = titleMap[type];
-  if (type === 'edchw') filterMIDByBank();
+  if (type === 'edchw') { filterMIDByBank(); onEdchwStatusChange(); }
   if (type === 'edc') { populatePOSMachineNoList(); resetEDCInfoPanel(); resetCentralCollectWrap(); }
   if (type === 'peri') onPeriStatusChange();
   document.getElementById(`modal-${type}`).classList.add('show');
@@ -2429,6 +2480,22 @@ window.saveRecord = async function(type) {
   };
   const missing = (reqMap[type]||[]).filter(f => !data[f]);
   if (missing.length > 0) { showToast('請填寫必填欄位', 'error'); return; }
+
+  // ── EDC刷卡機：借出狀態條件式必填 ──
+  if (type === 'edchw' && data.status === '借出') {
+    if (!data.loan_date) {
+      showToast('請填寫借出日期', 'error');
+      document.getElementById('edchw-loan_date').focus(); return;
+    }
+    if (!data.loan_person) {
+      showToast('請填寫借用人', 'error');
+      document.getElementById('edchw-loan_person').focus(); return;
+    }
+    if (!data.loan_purpose) {
+      showToast('請填寫借出用途', 'error');
+      document.getElementById('edchw-loan_purpose').focus(); return;
+    }
+  }
 
   // ── 硬體設備：狀態驅動的條件式必填 ──
   if (type === 'peri') {
