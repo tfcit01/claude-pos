@@ -424,7 +424,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.5 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.6 · 模擬系統</div>
   </div>
 </nav>
 
@@ -1874,32 +1874,36 @@ async function refreshDashboard() {
   // 建立分組結構
   const groups = [];
 
-  // 1. POS硬體設備（非POS主機的設備類型）
-  const periTypes = [...new Set(formalPeri.map(p => p.dev_type || '其他'))];
-  periTypes.sort().forEach(t => {
+  // 1. POS主機：先加父層標題，再依機型展開子項
+  const posMainItems = formalPeri.filter(p => (p.dev_type || '其他') === 'POS主機');
+  if (posMainItems.length > 0) {
+    groups.push({ label: 'POS', header: true, ...statRow(posMainItems) });
+    const models = [...new Set(posMainItems.map(p => p.model_no || '未知'))].sort();
+    models.forEach(m => {
+      const sub = posMainItems.filter(p => (p.model_no || '未知') === m);
+      groups.push({ label: `POS主機 · ${m}`, indent: true, ...statRow(sub) });
+    });
+  }
+
+  // 2. 其他硬體設備類型（排除POS主機）
+  const otherPeriTypes = [...new Set(
+    formalPeri.filter(p => (p.dev_type || '其他') !== 'POS主機').map(p => p.dev_type || '其他')
+  )].sort();
+  otherPeriTypes.forEach(t => {
     const items = formalPeri.filter(p => (p.dev_type || '其他') === t);
-    if (t === 'POS主機') {
-      // POS主機 → 依機型細分
-      const models = [...new Set(items.map(p => p.model_no || '未知'))];
-      models.sort().forEach(m => {
-        const sub = items.filter(p => (p.model_no || '未知') === m);
-        groups.push({ label: `POS主機 · ${m}`, indent: true, ...statRow(sub) });
-      });
-    } else {
-      groups.push({ label: t, indent: false, ...statRow(items) });
-    }
+    groups.push({ label: t, indent: false, ...statRow(items) });
   });
 
-  // 2. EDC刷卡機（中信 / 聯信）
-  const edcChixin  = formalEDC.filter(e => e.acquirer_bank === '中信');
-  const edcLianxin = formalEDC.filter(e => e.acquirer_bank === '聯信');
+  // 3. EDC刷卡機：先加父層標題，再依收單行細分
   if (formalEDC.length > 0) {
+    groups.push({ label: 'EDC刷卡機', header: true, ...statRow(formalEDC) });
+    const edcChixin  = formalEDC.filter(e => e.acquirer_bank === '中信');
+    const edcLianxin = formalEDC.filter(e => e.acquirer_bank === '聯信');
+    const edcOther   = formalEDC.filter(e => e.acquirer_bank !== '中信' && e.acquirer_bank !== '聯信');
     if (edcChixin.length > 0)
       groups.push({ label: 'EDC刷卡機 · 中信', indent: true, ...statRow(edcChixin) });
     if (edcLianxin.length > 0)
       groups.push({ label: 'EDC刷卡機 · 聯信', indent: true, ...statRow(edcLianxin) });
-    // 若有既非中信也非聯信的
-    const edcOther = formalEDC.filter(e => e.acquirer_bank !== '中信' && e.acquirer_bank !== '聯信');
     if (edcOther.length > 0)
       groups.push({ label: 'EDC刷卡機 · 其他', indent: true, ...statRow(edcOther) });
   }
@@ -1908,7 +1912,7 @@ async function refreshDashboard() {
   const allItems = [...formalPeri, ...formalEDC];
   const totals = statRow(allItems);
 
-  const tdR = (val, color) => `<td style="text-align:right;padding:5px 8px;font-size:13px;color:${color};font-weight:500">${val||0}</td>`;
+  const tdR = (val, color, bold) => `<td style="text-align:right;padding:5px 8px;font-size:13px;color:${color};font-weight:${bold?'700':'400'}">${val||0}</td>`;
 
   let html = `
   <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
@@ -1927,21 +1931,33 @@ async function refreshDashboard() {
 
   groups.forEach(g => {
     const pct = g.total ? Math.round(g.inuse / g.total * 100) : 0;
-    const labelStyle = g.indent
-      ? 'padding:4px 8px 4px 16px;font-size:12px;color:var(--text-sec);white-space:nowrap'
-      : 'padding:5px 8px 5px 0;font-size:13px;font-weight:600;color:var(--text-pri);white-space:nowrap';
-    html += `<tr style="border-bottom:1px solid #F4F5F7">
-      <td style="${labelStyle}">${g.indent ? '└ ' : ''}${g.label}</td>
-      <td style="padding:4px 8px">
+    let labelStyle, prefix;
+    if (g.header) {
+      // 父層標題：粗體深色，加上頂部分隔線
+      labelStyle = 'padding:7px 8px 5px 0;font-size:13px;font-weight:700;color:var(--text-pri);white-space:nowrap;border-top:2px solid var(--border)';
+      prefix = '';
+    } else if (g.indent) {
+      // 子項：縮排、灰色小字
+      labelStyle = 'padding:4px 8px 4px 18px;font-size:12px;color:var(--text-sec);white-space:nowrap';
+      prefix = '└ ';
+    } else {
+      // 一般設備類型
+      labelStyle = 'padding:5px 8px 5px 0;font-size:13px;font-weight:600;color:var(--text-pri);white-space:nowrap';
+      prefix = '';
+    }
+    const rowBorder = g.header ? '' : 'border-bottom:1px solid #F4F5F7';
+    html += `<tr style="${rowBorder}">
+      <td style="${labelStyle}">${prefix}${g.label}</td>
+      <td style="padding:4px 8px${g.header ? ';border-top:2px solid var(--border)' : ''}">
         <div style="height:6px;background:#F0F2F5;border-radius:3px;overflow:hidden;min-width:50px">
           <div style="height:100%;width:${pct}%;background:#2E8B57;border-radius:3px"></div>
         </div>
       </td>
-      ${tdR(g.inuse,'#2E8B57')}
-      ${tdR(g.stock,'#2060A8')}
-      ${tdR(g.loan,'#6040A0')}
-      ${tdR(g.repair,'#C07010')}
-      ${tdR(g.total,'var(--text-muted)')}
+      ${tdR(g.inuse,'#2E8B57', g.header)}
+      ${tdR(g.stock,'#2060A8', g.header)}
+      ${tdR(g.loan,'#6040A0', g.header)}
+      ${tdR(g.repair,'#C07010', g.header)}
+      ${tdR(g.total,'var(--text-muted)', g.header)}
     </tr>`;
   });
 
