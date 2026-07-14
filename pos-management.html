@@ -440,7 +440,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.3 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.4 · 模擬系統</div>
   </div>
 </nav>
 
@@ -1362,12 +1362,18 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
         </div>
         <div class="form-group">
           <label class="form-label required">異動至</label>
-          <select class="form-control" id="status-new-value">
+          <select class="form-control" id="status-new-value" onchange="onStatusModalChange()">
             <option>使用中</option><option>庫存</option><option>備機</option>
             <option>維修中</option><option>停用</option><option>調撥中</option>
             <option>待退回</option><option>已退回</option>
             <option>待報廢</option><option>已報廢</option><option>遺失</option>
           </select>
+        </div>
+        <!-- peri 使用中時，要求填入 POS機號（位置）-->
+        <div class="form-group" id="status-location-group" style="display:none">
+          <label class="form-label required">位置（POS機號）</label>
+          <input class="form-control" id="status-location-input" placeholder="請填寫POS機號，例：A00001" maxlength="20">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">⚠️ 狀態改為「使用中」時，須同步更新「位置」欄位</div>
         </div>
         <div class="form-group">
           <label class="form-label required">異動原因</label>
@@ -2652,10 +2658,25 @@ window.deleteRecord = async function(type, id, label) {
 };
 
 // ── Status Change ──
+// 「異動至」下拉變更：peri 選「使用中」→ 顯示位置欄位
+window.onStatusModalChange = function() {
+  if (!statusTarget) return;
+  const val = document.getElementById('status-new-value').value;
+  const locGroup = document.getElementById('status-location-group');
+  if (statusTarget.type === 'peri' && val === '使用中') {
+    locGroup.style.display = 'block';
+  } else {
+    locGroup.style.display = 'none';
+    document.getElementById('status-location-input').value = '';
+  }
+};
+
 window.openStatusChange = function(type, id, current) {
   statusTarget = { type, id, current };
   document.getElementById('status-current-display').innerHTML = statusBadge(current);
   document.getElementById('status-reason').value = '';
+  document.getElementById('status-location-input').value = '';
+  document.getElementById('status-location-group').style.display = 'none';
 
   // 依模組類型提供對應的狀態選項
   const sel = document.getElementById('status-new-value');
@@ -2663,6 +2684,11 @@ window.openStatusChange = function(type, id, current) {
   const defaultOptions = ['使用中','庫存','備機','維修中','停用','調撥中','待退回','已退回','待報廢','已報廢','遺失'];
   const opts = (type === 'peri') ? periOptions : defaultOptions;
   sel.innerHTML = opts.map(o => `<option value="${o}"${o===current?' selected':''}>${o}</option>`).join('');
+
+  // 若目前已是「使用中」，開啟時也顯示位置欄位
+  if (type === 'peri' && current === '使用中') {
+    document.getElementById('status-location-group').style.display = 'block';
+  }
 
   // Modal 標題依模組顯示
   const titleEl = document.querySelector('#modal-status .modal-title');
@@ -2677,14 +2703,43 @@ window.confirmStatusChange = async function() {
   const newStatus = document.getElementById('status-new-value').value;
   const { type, id, current } = statusTarget;
 
+  // peri 改為「使用中」時，位置欄位必填
+  let locationVal = null;
+  if (type === 'peri' && newStatus === '使用中') {
+    locationVal = document.getElementById('status-location-input').value.trim();
+    if (!locationVal) {
+      showToast('狀態為「使用中」時，請填寫位置（POS機號）', 'error');
+      document.getElementById('status-location-input').focus();
+      return;
+    }
+  }
+
   const list = await getData(type);
   const record = list.find(r => r.id === id);
   const entityKey = record?.machine_no || record?.tid || record?.asset_no || id;
 
-  await updateData(type, id, { status: newStatus, change_reason: reason, change_date: new Date().toISOString().slice(0,10), status_change_date: new Date().toISOString().slice(0,10) });
+  // 更新資料：若有位置值一併寫入
+  const updatePayload = {
+    status: newStatus,
+    change_reason: reason,
+    change_date: new Date().toISOString().slice(0,10),
+    status_change_date: new Date().toISOString().slice(0,10)
+  };
+  if (locationVal !== null) updatePayload.location = locationVal;
+
+  await updateData(type, id, updatePayload);
   await addLog({ entity_type: type.toUpperCase(), entity_key: entityKey, change_type: 'STATUS', change_reason: `${current} → ${newStatus}：${reason}`, operator: '操作人員' });
 
-  showToast(`狀態已更新為「${newStatus}」`, 'success');
+  // 若硬體設備編輯表單同時開著，同步更新表單顯示
+  const periStatusEl = document.getElementById('peri-status');
+  const periLocEl = document.getElementById('peri-location');
+  if (periStatusEl && type === 'peri') {
+    periStatusEl.value = newStatus;
+    if (locationVal && periLocEl) periLocEl.value = locationVal;
+    onPeriStatusChange();
+  }
+
+  showToast(`狀態已更新為「${newStatus}」${locationVal ? `，位置：${locationVal}` : ''}`, 'success');
   closeModal('status');
   const refreshFns = { pos: renderPOS, edc: renderEDC, peri: renderPeri, edchw: renderEDCHW };
   if (refreshFns[type]) await refreshFns[type]();
