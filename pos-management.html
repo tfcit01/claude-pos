@@ -440,7 +440,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.2 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.3 · 模擬系統</div>
   </div>
 </nav>
 
@@ -653,7 +653,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <thead>
               <tr>
                 <th>資產編號</th><th>設備類型</th><th>型號</th><th>品牌</th>
-                <th>位置</th><th>狀態</th><th>入庫日期</th><th>備註</th><th>操作</th>
+                <th>位置</th><th>設備狀態</th><th>入庫日期</th><th>備註</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="peri-tbody">
@@ -1094,9 +1094,9 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <input class="pos-control" id="peri-brand" placeholder="例：EPSON">
         </div>
 
-        <!-- 4. 狀態：庫存為預設，借出/使用中觸發對應必填 -->
+        <!-- 4. 設備狀態：庫存為預設，借出/使用中觸發對應必填 -->
         <div class="form-group">
-          <label class="pos-label required">狀態</label>
+          <label class="pos-label required">設備狀態</label>
           <select class="pos-control" id="peri-status" onchange="onPeriStatusChange()">
             <option value="庫存" selected>庫存</option>
             <option value="使用中">使用中</option>
@@ -2349,7 +2349,7 @@ window.renderPeri = async function() {
       <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.remark||''}">${r.remark||'—'}</td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="editRecord('peri','${r.id}')">編輯</button>
-        <button class="btn btn-outline btn-sm" onclick="openStatusChange('peri','${r.id}','${r.status||''}')">狀態</button>
+        <button class="btn btn-outline btn-sm" onclick="openStatusChange('peri','${r.id}','${r.status||''}')">設備狀態變更</button>
         <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteRecord('peri','${r.id}','${r.asset_no}')">刪除</button>
       </td>
     </tr>`).join('');
@@ -2655,8 +2655,19 @@ window.deleteRecord = async function(type, id, label) {
 window.openStatusChange = function(type, id, current) {
   statusTarget = { type, id, current };
   document.getElementById('status-current-display').innerHTML = statusBadge(current);
-  document.getElementById('status-new-value').value = current;
   document.getElementById('status-reason').value = '';
+
+  // 依模組類型提供對應的狀態選項
+  const sel = document.getElementById('status-new-value');
+  const periOptions = ['庫存','使用中','借出','維修中','已報廢'];
+  const defaultOptions = ['使用中','庫存','備機','維修中','停用','調撥中','待退回','已退回','待報廢','已報廢','遺失'];
+  const opts = (type === 'peri') ? periOptions : defaultOptions;
+  sel.innerHTML = opts.map(o => `<option value="${o}"${o===current?' selected':''}>${o}</option>`).join('');
+
+  // Modal 標題依模組顯示
+  const titleEl = document.querySelector('#modal-status .modal-title');
+  if (titleEl) titleEl.textContent = type === 'peri' ? '設備狀態變更' : '異動狀態';
+
   document.getElementById('modal-status').classList.add('show');
 };
 
