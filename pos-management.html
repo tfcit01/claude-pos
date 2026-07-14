@@ -440,7 +440,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.1 · 模擬系統</div>
   </div>
 </nav>
 
@@ -565,7 +565,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <thead>
               <tr>
                 <th>機號</th><th>機型</th><th>樓層</th><th>櫃號</th><th>櫃名</th>
-                <th>IP位址</th><th>狀態</th><th>統收</th><th>起始日期</th><th>操作</th>
+                <th>IP位址</th><th>POS狀態</th><th>統收</th><th>起始日期</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="pos-tbody">
@@ -2147,7 +2147,6 @@ window.renderPOS = async function() {
       <td>${fmtDate(r.start_date)}</td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="editRecord('pos','${r.id}')">編輯</button>
-        <button class="btn btn-outline btn-sm" onclick="openStatusChange('pos','${r.id}','${r.status||''}')">狀態</button>
         <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteRecord('pos','${r.id}','${r.machine_no}')">刪除</button>
       </td>
     </tr>`).join('');
