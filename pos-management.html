@@ -440,7 +440,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.8 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9 · 模擬系統</div>
   </div>
 </nav>
 
@@ -1928,19 +1928,19 @@ async function refreshDashboard() {
   const allItems = [...formalPeri, ...formalEDC];
   const totals = statRow(allItems);
 
-  const tdR = (val, color, bold) => `<td style="text-align:right;padding:5px 8px;font-size:13px;color:${color};font-weight:${bold?'700':'400'}">${val||0}</td>`;
+  const tdR = (val, color, bold) => `<td style="text-align:right;padding:6px 8px;font-size:15px;color:${color};font-weight:${bold?'700':'500'}">${val||0}</td>`;
 
   let html = `
-  <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
+  <table style="width:100%;border-collapse:collapse;font-size:15px;margin-bottom:6px">
     <thead>
       <tr style="border-bottom:2px solid var(--border)">
-        <th style="text-align:left;padding:4px 8px 7px 0;font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap">設備類型 / 機型</th>
-        <th style="padding:4px 0 7px 8px;min-width:70px"></th>
-        <th style="text-align:right;padding:4px 8px 7px;font-size:11px;font-weight:600;color:#2E8B57;white-space:nowrap">使用中</th>
-        <th style="text-align:right;padding:4px 8px 7px;font-size:11px;font-weight:600;color:#2060A8;white-space:nowrap">庫存</th>
-        <th style="text-align:right;padding:4px 8px 7px;font-size:11px;font-weight:600;color:#6040A0;white-space:nowrap">借出</th>
-        <th style="text-align:right;padding:4px 8px 7px;font-size:11px;font-weight:600;color:#C07010;white-space:nowrap">維修中</th>
-        <th style="text-align:right;padding:4px 0 7px 8px;font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap">總計</th>
+        <th style="text-align:left;padding:5px 8px 8px 0;font-size:13px;font-weight:600;color:var(--text-muted);white-space:nowrap">設備類型 / 機型</th>
+        <th style="padding:5px 0 8px 8px;min-width:70px"></th>
+        <th style="text-align:right;padding:5px 8px 8px;font-size:13px;font-weight:700;color:#2E8B57;white-space:nowrap">使用中</th>
+        <th style="text-align:right;padding:5px 8px 8px;font-size:13px;font-weight:700;color:#2060A8;white-space:nowrap">庫存</th>
+        <th style="text-align:right;padding:5px 8px 8px;font-size:13px;font-weight:700;color:#6040A0;white-space:nowrap">借出</th>
+        <th style="text-align:right;padding:5px 8px 8px;font-size:13px;font-weight:700;color:#C07010;white-space:nowrap">維修中</th>
+        <th style="text-align:right;padding:5px 0 8px 8px;font-size:13px;font-weight:700;color:var(--text-muted);white-space:nowrap">總計</th>
       </tr>
     </thead>
     <tbody>`;
@@ -1949,16 +1949,13 @@ async function refreshDashboard() {
     const pct = g.total ? Math.round(g.inuse / g.total * 100) : 0;
     let labelStyle, prefix;
     if (g.header) {
-      // 父層標題：粗體深色，加上頂部分隔線
-      labelStyle = 'padding:7px 8px 5px 0;font-size:13px;font-weight:700;color:var(--text-pri);white-space:nowrap;border-top:2px solid var(--border)';
+      labelStyle = 'padding:8px 8px 6px 0;font-size:15px;font-weight:700;color:var(--text-pri);white-space:nowrap;border-top:2px solid var(--border)';
       prefix = '';
     } else if (g.indent) {
-      // 子項：縮排、灰色小字
-      labelStyle = 'padding:4px 8px 4px 18px;font-size:12px;color:var(--text-sec);white-space:nowrap';
+      labelStyle = 'padding:5px 8px 5px 20px;font-size:14px;color:var(--text-sec);white-space:nowrap';
       prefix = '└ ';
     } else {
-      // 一般設備類型
-      labelStyle = 'padding:5px 8px 5px 0;font-size:13px;font-weight:600;color:var(--text-pri);white-space:nowrap';
+      labelStyle = 'padding:6px 8px 6px 0;font-size:15px;font-weight:600;color:var(--text-pri);white-space:nowrap';
       prefix = '';
     }
     const rowBorder = g.header ? '' : 'border-bottom:1px solid #F4F5F7';
@@ -1980,28 +1977,20 @@ async function refreshDashboard() {
   // 合計列
   const totPct = totals.total ? Math.round(totals.inuse/totals.total*100) : 0;
   html += `<tr style="border-top:2px solid var(--border);background:#F8F9FB">
-    <td style="padding:6px 8px 6px 0;font-size:13px;font-weight:700;color:var(--text-pri)">合計</td>
-    <td style="padding:6px 8px">
+    <td style="padding:7px 8px 7px 0;font-size:15px;font-weight:700;color:var(--text-pri)">合計</td>
+    <td style="padding:7px 8px">
       <div style="height:7px;background:#E0E3E8;border-radius:3px;overflow:hidden;min-width:50px">
         <div style="height:100%;width:${totPct}%;background:#2E8B57;border-radius:3px"></div>
       </div>
     </td>
-    ${tdR(totals.inuse,'#2E8B57')}
-    ${tdR(totals.stock,'#2060A8')}
-    ${tdR(totals.loan,'#6040A0')}
-    ${tdR(totals.repair,'#C07010')}
-    <td style="text-align:right;padding:6px 0 6px 8px;font-size:13px;font-weight:700;color:var(--text-pri)">${totals.total}</td>
+    ${tdR(totals.inuse,'#2E8B57',true)}
+    ${tdR(totals.stock,'#2060A8',true)}
+    ${tdR(totals.loan,'#6040A0',true)}
+    ${tdR(totals.repair,'#C07010',true)}
+    <td style="text-align:right;padding:7px 0 7px 8px;font-size:15px;font-weight:700;color:var(--text-pri)">${totals.total}</td>
   </tr>`;
 
-  html += `</tbody></table>
-  <div style="display:flex;gap:20px;padding-top:10px;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center">
-    <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#2E8B57">${totals.inuse}</div><div style="font-size:11px;color:var(--text-muted)">使用中 (${totPct}%)</div></div>
-    <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#2060A8">${totals.stock}</div><div style="font-size:11px;color:var(--text-muted)">庫存</div></div>
-    <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#6040A0">${totals.loan}</div><div style="font-size:11px;color:var(--text-muted)">借出</div></div>
-    <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#C07010">${totals.repair}</div><div style="font-size:11px;color:var(--text-muted)">維修中</div></div>
-    <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#B03030">${totals.retire}</div><div style="font-size:11px;color:var(--text-muted)">已報廢</div></div>
-    <div style="text-align:center;margin-left:auto"><div style="font-size:22px;font-weight:700;color:var(--text-pri)">${totals.total}</div><div style="font-size:11px;color:var(--text-muted)">設備總量</div></div>
-  </div>`;
+  html += `</tbody></table>`;
   periStatsEl.innerHTML = html;
 
   // ── 大樓構圖 ──
