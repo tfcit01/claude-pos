@@ -440,7 +440,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.1 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.2 · 模擬系統</div>
   </div>
 </nav>
 
@@ -565,7 +565,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <thead>
               <tr>
                 <th>機號</th><th>機型</th><th>樓層</th><th>櫃號</th><th>櫃名</th>
-                <th>IP位址</th><th>POS狀態</th><th>統收</th><th>起始日期</th><th>操作</th>
+                <th>IP位址</th><th>POS狀態</th><th>統收</th><th>起始日期</th><th>終止日期</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="pos-tbody">
@@ -878,9 +878,9 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
 
         <div class="pos-section-label">狀態與設定</div>
 
-        <!-- 狀態 -->
+        <!-- POS狀態 -->
         <div class="form-group">
-          <label class="pos-label required">狀態</label>
+          <label class="pos-label required">POS狀態</label>
           <select class="pos-control" id="pos-status">
             <option value="啟用">啟用</option>
             <option value="停用">停用</option>
@@ -2131,9 +2131,20 @@ window.renderPOS = async function() {
   document.getElementById('pos-count').textContent = `共 ${filtered.length} 筆`;
   const tbody = document.getElementById('pos-tbody');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">🖥️</div><p>無符合條件的POS設備</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">🖥️</div><p>無符合條件的POS設備</p></div></td></tr>`;
     return;
   }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const endDateCell = (dateStr) => {
+    if (!dateStr) return '<td style="color:var(--text-muted)">—</td>';
+    const d = new Date(dateStr); d.setHours(0,0,0,0);
+    const diffDays = Math.ceil((d - today) / 86400000);
+    // 距今 ≤30 天，或已是當月份（同年同月）
+    const sameMonth = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth();
+    const urgent = diffDays <= 30 || sameMonth;
+    const style = urgent ? 'color:#C0392B;font-weight:600' : '';
+    return `<td style="${style}">${fmtDate(dateStr)}</td>`;
+  };
   tbody.innerHTML = filtered.map(r => `
     <tr>
       <td><span class="num-chip">${r.machine_no||'—'}</span></td>
@@ -2145,6 +2156,7 @@ window.renderPOS = async function() {
       <td>${statusBadge(r.status)}</td>
       <td>${r.is_central_collect==='true'||r.is_central_collect===true ? '✅' : '—'}</td>
       <td>${fmtDate(r.start_date)}</td>
+      ${endDateCell(r.end_date)}
       <td>
         <button class="btn btn-outline btn-sm" onclick="editRecord('pos','${r.id}')">編輯</button>
         <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteRecord('pos','${r.id}','${r.machine_no}')">刪除</button>
