@@ -236,6 +236,47 @@ textarea.form-control { resize: vertical; min-height: 72px; }
   display: flex; gap: 8px; justify-content: flex-end;
 }
 
+/* ── 拓樸圖 ── */
+.topo-wrap { position:relative; width:100%; height:500px; }
+.topo-node {
+  position:absolute; display:flex; flex-direction:column; align-items:center;
+  gap:5px; cursor:pointer; transition:transform .15s; user-select:none;
+}
+.topo-node:hover { transform:scale(1.07); }
+.topo-card {
+  background:#fff; border-radius:12px; padding:10px 14px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.12); text-align:center;
+  border:2px solid transparent; min-width:76px;
+  display:flex; flex-direction:column; align-items:center; gap:5px;
+}
+.topo-card.s-on   { border-color:#27AE60; }
+.topo-card.s-err  { border-color:#E74C3C; }
+.topo-card.s-rep  { border-color:#E67E22; }
+.topo-card.s-none { border-color:#C8CDD2; background:#F8F9FB; }
+.topo-icon       { font-size:26px; line-height:1; }
+.topo-icon.s-on  { color:#27AE60; }
+.topo-icon.s-err { color:#E74C3C; }
+.topo-icon.s-rep { color:#E67E22; }
+.topo-icon.s-none{ color:#BDC3C7; }
+.topo-name  { font-size:11px; font-weight:600; color:#445; }
+.topo-sub   { font-size:10px; color:#889; max-width:82px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.topo-node.center .topo-card { min-width:118px; padding:14px 16px; border-radius:14px; box-shadow:0 4px 16px rgba(0,0,0,.18); }
+.topo-node.center .topo-icon { font-size:38px; }
+.topo-node.center .topo-name { font-size:14px; }
+.topo-detail {
+  position:absolute; right:12px; top:12px; width:210px; background:#fff;
+  border-radius:10px; padding:12px; box-shadow:0 4px 16px rgba(0,0,0,.16);
+  font-size:12px; display:none; z-index:20;
+}
+.topo-detail.show { display:block; }
+.topo-detail h4 { font-size:13px; font-weight:700; margin:0 0 8px; color:var(--text-pri); }
+.topo-dr  { display:flex; gap:6px; margin-bottom:4px; }
+.topo-dk  { color:#889; flex-shrink:0; min-width:54px; }
+.topo-dv  { color:#223; font-weight:500; word-break:break-all; }
+.topo-legend { position:absolute; left:12px; bottom:10px; display:flex; gap:10px; }
+.topo-li { display:flex; align-items:center; gap:4px; font-size:11px; color:#667; }
+.topo-dot { width:10px; height:10px; border-radius:50%; }
+
 /* ── 全域數字標籤（機號/TID/MID/IP/資產編號等） ── */
 .num-chip {
   font-family: "Courier New", Courier, monospace;
@@ -440,7 +481,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.4 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.5 · 模擬系統</div>
   </div>
 </nav>
 
@@ -565,7 +606,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <thead>
               <tr>
                 <th>機號</th><th>機型</th><th>樓層</th><th>櫃號</th><th>櫃名</th>
-                <th>IP位址</th><th>POS狀態</th><th>統收</th><th>起始日期</th><th>終止日期</th><th>操作</th>
+                <th>IP位址</th><th>POS狀態</th><th>統收</th><th>起始日期</th><th>終止日期</th><th>拓樸圖</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="pos-tbody">
@@ -1342,6 +1383,22 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="document.getElementById('modal-edc-log').classList.remove('show')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- Topology Modal -->
+<div class="modal-overlay" id="modal-topo">
+  <div class="modal" style="max-width:860px;width:95vw">
+    <div class="modal-header">
+      <span>🔗</span>
+      <span class="modal-title" id="topo-modal-title">設備拓樸圖</span>
+      <button class="modal-close" onclick="document.getElementById('modal-topo').classList.remove('show')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;background:#F0F4F8;min-height:520px">
+      <div id="topo-content" style="position:relative;min-height:520px;display:flex;align-items:center;justify-content:center">
+        <div class="empty-state"><div class="empty-icon">⏳</div><p>載入中…</p></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2137,7 +2194,7 @@ window.renderPOS = async function() {
   document.getElementById('pos-count').textContent = `共 ${filtered.length} 筆`;
   const tbody = document.getElementById('pos-tbody');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">🖥️</div><p>無符合條件的POS設備</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">🖥️</div><p>無符合條件的POS設備</p></div></td></tr>`;
     return;
   }
   const today = new Date(); today.setHours(0,0,0,0);
@@ -2163,6 +2220,7 @@ window.renderPOS = async function() {
       <td>${r.is_central_collect==='true'||r.is_central_collect===true ? '✅' : '—'}</td>
       <td>${fmtDate(r.start_date)}</td>
       ${endDateCell(r.end_date)}
+      <td><button class="btn btn-outline btn-sm" onclick="openTopoModal('${r.id}','${r.machine_no||''}','${r.booth_name||''}')">🔗 拓樸圖</button></td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="editRecord('pos','${r.id}')">編輯</button>
         <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteRecord('pos','${r.id}','${r.machine_no}')">刪除</button>
@@ -2176,6 +2234,154 @@ let edcSortKey = '';
 let edcSortAsc = true;
 
 // ── POS-EDC 異動紀錄 Modal ──
+// ── 設備拓樸圖 ──
+window.openTopoModal = async function(posId, machineNo, boothName) {
+  document.getElementById('topo-modal-title').textContent = `設備拓樸圖 — ${machineNo}${boothName ? ' · '+boothName : ''}`;
+  const topoContent = document.getElementById('topo-content');
+  topoContent.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><p>載入中…</p></div>';
+  document.getElementById('modal-topo').classList.add('show');
+
+  const [periList, edcList, edchwList, posList] = await Promise.all([
+    getData('peri'), getData('edc'), getData('edchw'), getData('pos')
+  ]);
+
+  const posRecord = posList.find(p => p.id === posId) || {};
+
+  // 找此POS機號關聯的周邊設備（位置欄位 = 機號）
+  const myPeri = periList.filter(p => p.location === machineNo);
+  // 找此POS關聯的TID（POS-EDC關聯）
+  const myEdc  = edcList.filter(e => e.pos_machine_no === machineNo);
+  // 從TID找EDC刷卡機主檔
+  const myEdcHw = myEdc.map(e => edchwList.find(h => h.tid === e.tid)).filter(Boolean);
+
+  // 狀態→CSS class
+  const sClass = (status) => {
+    if (!status || status === '庫存') return 's-none';
+    if (status === '使用中' || status === '啟用') return 's-on';
+    if (status === '維修中') return 's-rep';
+    if (['停用','已報廢','遺失'].includes(status)) return 's-err';
+    return 's-none';
+  };
+
+  // 取第一筆符合設備類型的周邊設備
+  const getPeri = (type) => myPeri.filter(p => p.dev_type === type);
+
+  // 節點定義：位置 left%, top%, icon, label, data
+  const W = 820, H = 500, cx = W/2, cy = H/2;
+
+  // 各方向的設備群組
+  const topoGroups = [
+    { dir:'top',   items: getPeri('發票機'),    icon:'fa-print',         label:'發票機',   emoji:'🖨' },
+    { dir:'right1',items: getPeri('感應讀卡機'), icon:'fa-wifi',          label:'感應讀卡機',emoji:'📡' },
+    { dir:'right2',items: myEdcHw,              icon:'fa-credit-card',   label:'刷卡機',   emoji:'💳' },
+    { dir:'left',  items: getPeri('UPS'),        icon:'fa-battery-full',  label:'UPS',      emoji:'🔋' },
+    { dir:'bottom1',items: getPeri('掃描器'),    icon:'fa-barcode',       label:'掃描器',   emoji:'📷' },
+    { dir:'bottom2',items: getPeri('悠遊卡機'),  icon:'fa-id-card',       label:'悠遊卡機', emoji:'💳' },
+  ];
+
+  // 位置映射
+  const positions = {
+    top:     { x: cx,       y: 80  },
+    right1:  { x: cx+230,   y: cy-80 },
+    right2:  { x: cx+230,   y: cy+80 },
+    left:    { x: cx-230,   y: cy   },
+    bottom1: { x: cx-110,   y: cy+185 },
+    bottom2: { x: cx+110,   y: cy+185 },
+  };
+
+  // SVG 連接線
+  let svgLines = `<svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none" xmlns="http://www.w3.org/2000/svg">`;
+  topoGroups.forEach(g => {
+    if (g.items.length === 0) return;
+    const pos = positions[g.dir];
+    const sc = sClass(g.items[0]?.status);
+    const color = sc==='s-on'?'#27AE60': sc==='s-rep'?'#E67E22': sc==='s-err'?'#E74C3C': '#C8CDD2';
+    const pct = (v, total) => `${v/total*100}%`;
+    svgLines += `<line x1="${pct(cx,W)}" y1="${pct(cy,H)}" x2="${pct(pos.x,W)}" y2="${pct(pos.y,H)}"
+      stroke="${color}" stroke-width="2" stroke-dasharray="${sc==='s-none'?'6 4':'0'}" opacity="0.7"/>`;
+  });
+  svgLines += `</svg>`;
+
+  // 建立節點 HTML
+  const makeNode = (g) => {
+    const pos = positions[g.dir];
+    const hasItems = g.items.length > 0;
+    const sc = hasItems ? sClass(g.items[0]?.status) : 's-none';
+    const model = hasItems ? (g.items[0]?.model_no || g.items[0]?.model || '') : '';
+    const statusText = hasItems ? (g.items[0]?.status || '庫存') : '未安裝';
+    const count = g.items.length > 1 ? ` ×${g.items.length}` : '';
+    const dataAttr = encodeURIComponent(JSON.stringify(g.items));
+    return `<div class="topo-node" style="left:${pos.x/W*100}%;top:${pos.y/H*100}%;transform:translate(-50%,-50%)"
+      onclick="showTopoDetail(this,'${g.label}',decodeURIComponent('${dataAttr}'))">
+      <div class="topo-card ${sc}">
+        <div class="topo-icon ${sc}">${g.emoji}</div>
+        <div class="topo-name">${g.label}${count}</div>
+        <div class="topo-sub">${hasItems ? model : '未安裝'}</div>
+      </div>
+      <div style="font-size:10px;color:${sc==='s-on'?'#27AE60':sc==='s-rep'?'#E67E22':sc==='s-err'?'#E74C3C':'#889'}">${statusText}</div>
+    </div>`;
+  };
+
+  // POS主機節點
+  const posStatus = posRecord.status || '啟用';
+  const posSc = sClass(posStatus);
+  const posNode = `<div class="topo-node center" style="left:50%;top:50%;transform:translate(-50%,-50%)"
+    onclick="showTopoDetail(this,'POS主機',decodeURIComponent('${encodeURIComponent(JSON.stringify([posRecord]))}'))">
+    <div class="topo-card ${posSc}">
+      <div class="topo-icon ${posSc}">🖥️</div>
+      <div class="topo-name">${machineNo}</div>
+      <div class="topo-sub">${posRecord.model||''} ${posRecord.booth_name||''}</div>
+      <div style="font-size:11px;margin-top:2px;color:${posSc==='s-on'?'#27AE60':'#889'}">${posStatus}</div>
+    </div>
+  </div>`;
+
+  // 詳細資料面板
+  const detailPanel = `<div class="topo-detail" id="topo-detail">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h4 id="topo-detail-title" style="font-size:13px;font-weight:700;margin:0;color:var(--text-pri)">—</h4>
+      <button style="background:none;border:none;cursor:pointer;font-size:14px;color:#889" onclick="document.getElementById('topo-detail').classList.remove('show')">✕</button>
+    </div>
+    <div id="topo-detail-body"></div>
+  </div>`;
+
+  // 圖例
+  const legend = `<div class="topo-legend">
+    <div class="topo-li"><div class="topo-dot" style="background:#27AE60"></div>在線</div>
+    <div class="topo-li"><div class="topo-dot" style="background:#E67E22"></div>維修中</div>
+    <div class="topo-li"><div class="topo-dot" style="background:#E74C3C"></div>異常</div>
+    <div class="topo-li"><div class="topo-dot" style="background:#C8CDD2"></div>未安裝</div>
+  </div>`;
+
+  topoContent.innerHTML = `<div class="topo-wrap" style="position:relative;width:820px;max-width:100%;height:500px;margin:0 auto">
+    ${svgLines}
+    ${posNode}
+    ${topoGroups.map(makeNode).join('')}
+    ${detailPanel}
+    ${legend}
+  </div>`;
+};
+
+window.showTopoDetail = function(node, label, jsonStr) {
+  const items = JSON.parse(jsonStr);
+  const panel = document.getElementById('topo-detail');
+  document.getElementById('topo-detail-title').textContent = label;
+  const fieldMap = {
+    machine_no:'機號', model:'機型', model_no:'型號', floor:'樓層', booth_name:'櫃名',
+    ip_addr:'IP', status:'狀態', mid:'MID', tid:'TID', acquirer_bank:'收單行',
+    inbound_date:'入庫日', location:'位置', asset_no:'資產編號', remark:'備註'
+  };
+  let html = '';
+  items.forEach((item, idx) => {
+    if (items.length > 1) html += `<div style="font-size:11px;font-weight:600;color:#889;margin:${idx>0?'10px':'0'} 0 4px">第 ${idx+1} 筆</div>`;
+    Object.entries(fieldMap).forEach(([k,v]) => {
+      if (item[k]) html += `<div class="topo-dr"><span class="topo-dk">${v}</span><span class="topo-dv">${item[k]}</span></div>`;
+    });
+  });
+  if (!html) html = '<div style="color:#889;font-size:12px">無詳細資料</div>';
+  document.getElementById('topo-detail-body').innerHTML = html;
+  panel.classList.add('show');
+};
+
 window.openEDCLogModal = async function(recordId, posMachineNo, tid) {
   const isAll = !recordId;
   const title = isAll
