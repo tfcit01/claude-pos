@@ -465,6 +465,9 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
   <div class="nav-item" onclick="showPage('peripheral')">
     <span class="nav-icon">🔌</span> POS硬體設備
   </div>
+  <div class="nav-item" onclick="showPage('loan')">
+    <span class="nav-icon">📤</span> 借用清冊
+  </div>
 
   <div class="sidebar-section-label">管理</div>
 
@@ -481,7 +484,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.5 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.7 · 模擬系統</div>
   </div>
 </nav>
 
@@ -735,6 +738,45 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             </thead>
             <tbody id="edchw-tbody">
               <tr><td colspan="11"><div class="empty-state"><div class="empty-icon">⏳</div><p>載入中…</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─ LOAN ─ -->
+    <div class="page" id="page-loan">
+      <div class="page-header" style="margin-bottom:16px">
+        <div>
+          <h2 style="font-size:18px;font-weight:700;color:var(--text-pri);margin:0">借用清冊</h2>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">包含所有外借中的硬體設備與 EDC 刷卡機</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <select class="form-control" id="loan-type-filter" onchange="renderLoan()" style="width:140px">
+            <option value="">全部類型</option>
+            <option value="peri">POS硬體設備</option>
+            <option value="edchw">EDC刷卡機</option>
+          </select>
+          <span id="loan-count" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body" style="padding:0">
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead>
+              <tr>
+                <th style="padding:9px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap">類型</th>
+                <th style="padding:9px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">識別</th>
+                <th style="padding:9px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">型號</th>
+                <th style="padding:9px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">借用人</th>
+                <th style="padding:9px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">借用用途</th>
+                <th style="padding:9px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap">借用日期</th>
+                <th style="padding:9px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap">預計歸還</th>
+                <th style="padding:9px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">聯絡電話</th>
+              </tr>
+            </thead>
+            <tbody id="loan-tbody">
+              <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">⏳</div><p>載入中…</p></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -1161,9 +1203,36 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             oninput="formatInboundDateInput(this)">
         </div>
 
-        <!-- 備註：取代異動原因，依狀態提示必填內容 -->
+        <!-- 借出資訊（設備狀態=借出時顯示） -->
+        <div id="peri-loan-section" style="display:none;grid-column:1/-1;background:#FFF9E6;border:1px solid #E8C84A;border-radius:6px;padding:12px 14px;margin-bottom:4px">
+          <div style="font-size:12px;font-weight:600;color:#8a6c00;margin-bottom:10px;letter-spacing:.03em">📋 借出資訊</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 14px">
+            <div class="form-group" style="margin:0">
+              <label class="pos-label required">借用人</label>
+              <input class="pos-control" id="peri-loan_person" placeholder="姓名或單位" maxlength="40">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label required">借用用途</label>
+              <input class="pos-control" id="peri-loan_purpose" placeholder="借用目的說明" maxlength="80">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label">聯絡電話</label>
+              <input class="pos-control" id="peri-loan_phone" placeholder="分機或手機" maxlength="20" inputmode="tel">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label required">借用日期</label>
+              <input class="pos-control" type="date" id="peri-loan_date">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label">預計歸還日期</label>
+              <input class="pos-control" type="date" id="peri-loan_return_date">
+            </div>
+          </div>
+        </div>
+
+        <!-- 備註 -->
         <div class="form-group" style="grid-column:1/-1">
-          <label class="pos-label" id="peri-remark-label">備註</label>
+          <label class="pos-label">備註</label>
           <textarea class="pos-control" id="peri-remark"
             placeholder="備註說明…" style="min-height:52px;resize:vertical"></textarea>
         </div>
@@ -1687,27 +1756,21 @@ window.onEdchwStatusChange = function() {
 
 window.onPeriStatusChange = function() {
   const status = document.getElementById('peri-status').value;
-  const remarkLabel = document.getElementById('peri-remark-label');
-  const remarkEl = document.getElementById('peri-remark');
   const locationLabel = document.getElementById('peri-location-label');
   const locationEl = document.getElementById('peri-location');
+  const loanSection = document.getElementById('peri-loan-section');
 
-  // 重置標籤
-  remarkLabel.textContent = '備註';
-  remarkLabel.classList.remove('required');
-  remarkEl.placeholder = '備註說明…';
-  locationLabel.textContent = '位置';
-  locationLabel.classList.remove('required');
-  locationEl.placeholder = '例：01F-B101';
+  // 重置位置標籤
+  if (locationLabel) { locationLabel.textContent = '位置'; locationLabel.classList.remove('required'); }
+  if (locationEl) locationEl.placeholder = '例：01F-B101';
 
-  if (status === '借出') {
-    remarkLabel.textContent = '備註（借用者）';
-    remarkLabel.classList.add('required');
-    remarkEl.placeholder = '請填寫借用者姓名/單位';
-  } else if (status === '使用中') {
-    locationLabel.textContent = '位置（POS機號）';
-    locationLabel.classList.add('required');
-    locationEl.placeholder = '請填寫POS機號，例：A00001';
+  // 借出區塊
+  if (loanSection) loanSection.style.display = status === '借出' ? 'block' : 'none';
+
+  // 使用中：位置欄位改為「位置（POS機號）」必填
+  if (status === '使用中') {
+    if (locationLabel) { locationLabel.textContent = '位置（POS機號）'; locationLabel.classList.add('required'); }
+    if (locationEl) locationEl.placeholder = '請填寫POS機號，例：A00001';
   }
 };
 
@@ -1865,6 +1928,7 @@ window.showPage = function(name) {
     edc: ['POS-EDC關聯', '主檔管理'],
     peripheral: ['POS硬體設備', '硬體主檔'],
     edchw: ['EDC刷卡機', '主檔管理'],
+    loan: ['借用清冊', '外借中設備'],
     log: ['異動歷程紀錄', '全部異動'],
     config: ['系統設定', 'Firebase & 示範資料']
   };
@@ -1886,6 +1950,7 @@ window.showPage = function(name) {
   else if (name === 'edc') renderEDC();
   else if (name === 'peripheral') renderPeri();
   else if (name === 'edchw') renderEDCHW();
+  else if (name === 'loan') renderLoan();
   else if (name === 'log') renderLog();
   else if (name === 'config') loadConfigFields();
 };
@@ -2308,6 +2373,7 @@ window.openTopoModal = async function(posId, machineNo, boothName) {
     const hasItems = g.items.length > 0;
     const sc = hasItems ? sClass(g.items[0]?.status) : 's-none';
     const model = hasItems ? (g.items[0]?.model_no || g.items[0]?.model || '') : '';
+    const assetNo = hasItems ? (g.items[0]?.asset_no || '') : '';
     const statusText = hasItems ? (g.items[0]?.status || '庫存') : '未安裝';
     const count = g.items.length > 1 ? ` ×${g.items.length}` : '';
     const dataAttr = encodeURIComponent(JSON.stringify(g.items));
@@ -2317,6 +2383,7 @@ window.openTopoModal = async function(posId, machineNo, boothName) {
         <div class="topo-icon ${sc}">${g.emoji}</div>
         <div class="topo-name">${g.label}${count}</div>
         <div class="topo-sub">${hasItems ? model : '未安裝'}</div>
+        ${assetNo ? `<div class="topo-sub" style="color:var(--text-muted);font-size:9px">${assetNo}</div>` : ''}
       </div>
       <div style="font-size:10px;color:${sc==='s-on'?'#27AE60':sc==='s-rep'?'#E67E22':sc==='s-err'?'#E74C3C':'#889'}">${statusText}</div>
     </div>`;
@@ -2366,9 +2433,10 @@ window.showTopoDetail = function(node, label, jsonStr) {
   const panel = document.getElementById('topo-detail');
   document.getElementById('topo-detail-title').textContent = label;
   const fieldMap = {
-    machine_no:'機號', model:'機型', model_no:'型號', floor:'樓層', booth_name:'櫃名',
-    ip_addr:'IP', status:'狀態', mid:'MID', tid:'TID', acquirer_bank:'收單行',
-    inbound_date:'入庫日', location:'位置', asset_no:'資產編號', remark:'備註'
+    machine_no:'機號', asset_no:'資產編號', model:'機型', model_no:'型號',
+    floor:'樓層', booth_name:'櫃名', ip_addr:'IP', status:'狀態',
+    mid:'MID', tid:'TID', acquirer_bank:'收單行',
+    inbound_date:'入庫日', location:'位置', remark:'備註'
   };
   let html = '';
   items.forEach((item, idx) => {
@@ -2605,6 +2673,61 @@ window.renderEDCHW = async function() {
 };
 
 // ── Log ──
+// ── 借用清冊 ──
+window.renderLoan = async function() {
+  const typeFilter = document.getElementById('loan-type-filter')?.value || '';
+  const [periList, edchwList] = await Promise.all([getData('peri'), getData('edchw')]);
+
+  // 只取借出狀態的設備
+  const periLoaned  = periList.filter(p => p.status === '借出')
+    .map(p => ({ ...p, _type: 'peri', _typeLabel: 'POS硬體設備',
+      _id: p.asset_no || p.id,
+      _model: p.model_no || p.dev_type || '—' }));
+
+  const edchwLoaned = edchwList.filter(e => e.status === '借出')
+    .map(e => ({ ...e, _type: 'edchw', _typeLabel: 'EDC刷卡機',
+      _id: e.tid || e.id,
+      _model: e.model || '—' }));
+
+  let combined = [...periLoaned, ...edchwLoaned];
+  if (typeFilter) combined = combined.filter(r => r._type === typeFilter);
+
+  // 依借用日期排序（最新在前）
+  combined.sort((a, b) => (b.loan_date || '').localeCompare(a.loan_date || ''));
+
+  document.getElementById('loan-count').textContent = `共 ${combined.length} 筆`;
+  const tbody = document.getElementById('loan-tbody');
+
+  if (combined.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📤</div><p>目前無外借中的設備</p></div></td></tr>`;
+    return;
+  }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const returnDateCell = (dateStr) => {
+    if (!dateStr) return '<td style="color:var(--text-muted)">—</td>';
+    const d = new Date(dateStr); d.setHours(0,0,0,0);
+    const overdue = d < today;
+    const soon = !overdue && Math.ceil((d - today) / 86400000) <= 7;
+    const style = overdue ? 'color:#C0392B;font-weight:600' : soon ? 'color:#E67E22;font-weight:600' : '';
+    const suffix = overdue ? ' ⚠️逾期' : soon ? ' ⚡即將到期' : '';
+    return `<td style="${style}">${fmtDate(dateStr)}${suffix}</td>`;
+  };
+
+  tbody.innerHTML = combined.map(r => `<tr style="border-bottom:1px solid #F0F2F5">
+    <td style="padding:10px 14px">
+      <span class="badge ${r._type==='peri'?'badge-stock':'badge-active'}" style="font-size:11px">${r._typeLabel}</span>
+    </td>
+    <td style="padding:10px 14px"><span class="num-chip">${r._id||'—'}</span></td>
+    <td style="padding:10px 14px;font-size:13px">${r._model}</td>
+    <td style="padding:10px 14px;font-size:13px;font-weight:500">${r.loan_person||'—'}</td>
+    <td style="padding:10px 14px;font-size:13px;color:var(--text-sec)">${r.loan_purpose||'—'}</td>
+    <td style="padding:10px 14px;white-space:nowrap">${fmtDate(r.loan_date)}</td>
+    ${returnDateCell(r.loan_return_date)}
+    <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${r.loan_phone||'—'}</td>
+  </tr>`).join('');
+};
+
 window.renderLog = async function() {
   const list = await getData('log');
   const typeF = document.getElementById('log-type-filter').value;
@@ -2642,7 +2765,7 @@ async function refreshLogBadge() {
 const MODAL_FIELDS = {
   pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','pos_type','is_central_collect','start_date','end_date','remark'],
   edc: ['pos_machine_no','special_purpose','tid','start_date','end_date','status','status_change_date'],
-  peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','remark'],
+  peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','remark','loan_person','loan_purpose','loan_phone','loan_date','loan_return_date'],
   edchw: ['purpose','model','acquirer_bank','mid','tid','ip_addr','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark','loan_date','loan_person','loan_phone','loan_purpose','loan_return_date']
 };
 
@@ -2769,24 +2892,30 @@ window.saveRecord = async function(type) {
     }
   }
 
-  // ── 硬體設備：狀態驅動的條件式必填 ──
+  // ── 硬體設備：借出狀態條件式必填 ──
   if (type === 'peri') {
-    if (data.status === '借出' && !data.remark) {
-      showToast('狀態為「借出」時，請於備註欄位填寫借用者', 'error');
-      document.getElementById('peri-remark').focus();
-      return;
+    if (data.status === '借出') {
+      if (!data.loan_person) {
+        showToast('請填寫借用人', 'error');
+        document.getElementById('peri-loan_person').focus(); return;
+      }
+      if (!data.loan_purpose) {
+        showToast('請填寫借用用途', 'error');
+        document.getElementById('peri-loan_purpose').focus(); return;
+      }
+      if (!data.loan_date) {
+        showToast('請填寫借用日期', 'error');
+        document.getElementById('peri-loan_date').focus(); return;
+      }
     }
     if (data.status === '使用中' && !data.location) {
       showToast('狀態為「使用中」時，請於位置欄位填入POS機號', 'error');
-      document.getElementById('peri-location').focus();
-      return;
+      document.getElementById('peri-location').focus(); return;
     }
-    // 入庫日期：MMDD 轉為完整日期（年份取當下系統年）
     if (data.inbound_date) {
       if (data.inbound_date.length !== 4) {
         showToast('入庫日期請輸入4碼數字（MMDD），例：0615', 'error');
-        document.getElementById('peri-inbound_date').focus();
-        return;
+        document.getElementById('peri-inbound_date').focus(); return;
       }
       data.inbound_date = mmddToFullDate(data.inbound_date);
     }
