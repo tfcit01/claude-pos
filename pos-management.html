@@ -484,7 +484,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.8 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.9 · 模擬系統</div>
   </div>
 </nav>
 
@@ -732,7 +732,9 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <table>
             <thead>
               <tr>
-                <th>用途</th><th>機型</th><th>收單行</th><th>MID</th><th>TID</th><th>IP</th>
+                <th>用途</th>
+                <th>機型 <span style="font-size:10px;font-weight:400;color:#C0392B;text-decoration:underline;text-decoration-color:#C0392B">紅線代表無線</span></th>
+                <th>收單行</th><th>MID</th><th>TID</th><th>IP</th>
                 <th>狀態</th><th>入庫日期</th><th>異動日期</th><th>異動原因</th><th>操作</th>
               </tr>
             </thead>
@@ -1299,6 +1301,17 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           </select>
         </div>
 
+        <!-- 無線刷卡機 -->
+        <div class="form-group" style="align-self:end;padding-bottom:6px">
+          <label class="pos-label" style="margin-bottom:0">&nbsp;</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-pri);user-select:none">
+            <input type="checkbox" id="edchw-is_wireless" onchange="onEdchwWirelessChange()"
+              style="width:16px;height:16px;cursor:pointer;accent-color:#C0392B">
+            <span>無線刷卡機</span>
+            <span style="font-size:11px;color:#C0392B;font-weight:500">（勾選後IP欄位無需填寫）</span>
+          </label>
+        </div>
+
         <!-- MID -->
         <div class="form-group">
           <label class="pos-label required">MID（商店代號）</label>
@@ -1330,7 +1343,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
 
         <!-- IP：IPv4格式 -->
         <div class="form-group">
-          <label class="pos-label required">IP</label>
+          <label class="pos-label required" id="edchw-ip-label">IP</label>
           <input class="pos-control" id="edchw-ip_addr"
             placeholder="192.168.1.100"
             inputmode="decimal"
@@ -1746,6 +1759,29 @@ window.onPeriDevTypeChange = function() {
 };
 
 // 狀態變動時：借出→備註需填借用者；使用中→位置需填POS機號
+// EDC刷卡機：無線刷卡機 checkbox 聯動 IP 欄位
+window.onEdchwWirelessChange = function() {
+  const isWireless = document.getElementById('edchw-is_wireless').checked;
+  const ipInput    = document.getElementById('edchw-ip_addr');
+  const ipLabel    = document.getElementById('edchw-ip-label');
+  if (isWireless) {
+    ipInput.value       = '';
+    ipInput.disabled    = true;
+    ipInput.placeholder = '無線刷卡機，無須填寫IP';
+    ipInput.style.background = '#F0F2F5';
+    ipInput.style.color       = '#aaa';
+    ipLabel.classList.remove('required');
+    ipLabel.textContent = 'IP';
+  } else {
+    ipInput.disabled    = false;
+    ipInput.placeholder = '192.168.1.100';
+    ipInput.style.background = '';
+    ipInput.style.color       = '';
+    ipLabel.classList.add('required');
+    ipLabel.textContent = 'IP';
+  }
+};
+
 // EDC刷卡機：狀態切換時顯示/隱藏借出資訊區塊
 window.onEdchwStatusChange = function() {
   const status = document.getElementById('edchw-status').value;
@@ -2655,7 +2691,9 @@ window.renderEDCHW = async function() {
   tbody.innerHTML = filtered.map(r => `
     <tr>
       <td>${r.purpose||'—'}</td>
-      <td>${r.model||'—'}</td>
+      <td>${r.is_wireless === true || r.is_wireless === 'true'
+        ? `<span style="text-decoration:underline;text-decoration-color:#C0392B;text-decoration-thickness:2px;color:var(--text-pri)">${r.model||'—'}</span>`
+        : (r.model||'—')}</td>
       <td>${r.acquirer_bank||'—'}</td>
       <td><span class="num-chip">${r.mid||'—'}</span>${r.mid && MID_LABEL[r.mid] ? `<span style="font-size:11px;color:var(--text-muted);margin-left:4px">（${MID_LABEL[r.mid]}）</span>` : ''}</td>
       <td><span class="num-chip">${r.tid||'—'}</span></td>
@@ -2766,7 +2804,7 @@ const MODAL_FIELDS = {
   pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','pos_type','is_central_collect','start_date','end_date','remark'],
   edc: ['pos_machine_no','special_purpose','tid','start_date','end_date','status','status_change_date'],
   peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','remark','loan_person','loan_purpose','loan_phone','loan_date','loan_return_date'],
-  edchw: ['purpose','model','acquirer_bank','mid','tid','ip_addr','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark','loan_date','loan_person','loan_phone','loan_purpose','loan_return_date']
+  edchw: ['purpose','model','is_wireless','acquirer_bank','mid','tid','ip_addr','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark','loan_date','loan_person','loan_phone','loan_purpose','loan_return_date']
 };
 
 window.openModal = function(type) {
@@ -2776,7 +2814,14 @@ window.openModal = function(type) {
   const titleMap = { pos:'新增 POS 收銀機', edc:'新增 POS-EDC 關聯', peri:'新增 硬體設備', edchw:'新增 EDC 刷卡機' };
   const titleEl = document.getElementById(`modal-${type}-title`);
   if (titleEl) titleEl.textContent = titleMap[type];
-  if (type === 'edchw') { filterMIDByBank(); onEdchwStatusChange(); }
+  if (type === 'edchw') { filterMIDByBank(); onEdchwStatusChange();
+    // 回填無線刷卡機 checkbox
+    const wirelessEl = document.getElementById('edchw-is_wireless');
+    if (wirelessEl) {
+      wirelessEl.checked = record.is_wireless === true || record.is_wireless === 'true';
+      onEdchwWirelessChange();
+    }
+  }
   if (type === 'edc') { populatePOSMachineNoList(); resetEDCInfoPanel(); resetCentralCollectWrap(); }
   if (type === 'peri') onPeriStatusChange();
   document.getElementById(`modal-${type}`).classList.add('show');
@@ -2799,6 +2844,10 @@ function clearForm(type) {
     if (statusEl) statusEl.value = '啟用';
     const posInput = document.getElementById('edc-pos_machine_no');
     if (posInput) posInput.readOnly = false;
+  }
+  if (type === 'edchw') {
+    const wirelessEl = document.getElementById('edchw-is_wireless');
+    if (wirelessEl) { wirelessEl.checked = false; onEdchwWirelessChange(); }
   }
   if (type === 'peri') {
     const statusEl = document.getElementById('peri-status');
@@ -2871,12 +2920,22 @@ window.saveRecord = async function(type) {
     pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','is_central_collect','start_date','end_date'],
     edc: ['pos_machine_no','tid','start_date','end_date','status'],
     peri: ['asset_no','dev_type','model_no','status'],
-    edchw: ['purpose','model','acquirer_bank','mid','tid','ip_addr','status','inbound_date']
+    edchw: ['purpose','model','acquirer_bank','mid','tid','status','inbound_date']
   };
   const missing = (reqMap[type]||[]).filter(f => !data[f]);
   if (missing.length > 0) { showToast('請填寫必填欄位', 'error'); return; }
 
-  // ── EDC刷卡機：借出狀態條件式必填 ──
+  // ── EDC刷卡機：無線刷卡機時 IP 非必填，有線時必填 ──
+  if (type === 'edchw') {
+    const isWireless = document.getElementById('edchw-is_wireless')?.checked || data.is_wireless === 'true' || data.is_wireless === true;
+    if (!isWireless && !data.ip_addr) {
+      showToast('有線刷卡機請填寫IP位址', 'error');
+      document.getElementById('edchw-ip_addr').focus(); return;
+    }
+    // 無線刷卡機：清空 IP，紀錄 is_wireless
+    if (isWireless) { data.ip_addr = ''; data.is_wireless = true; }
+    else { data.is_wireless = false; }
+  }
   if (type === 'edchw' && data.status === '借出') {
     if (!data.loan_date) {
       showToast('請填寫借出日期', 'error');
