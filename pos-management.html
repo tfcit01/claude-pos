@@ -484,7 +484,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.0 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.1 · 模擬系統</div>
   </div>
 </nav>
 
@@ -1512,6 +1512,28 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <label class="form-label required">位置（POS機號）</label>
           <input class="form-control" id="status-location-input" placeholder="請填寫POS機號，例：A00001" maxlength="20">
           <div style="font-size:11px;color:var(--text-muted);margin-top:4px">⚠️ 狀態改為「使用中」時，須同步更新「位置」欄位</div>
+        </div>
+        <!-- peri / edchw 借出時，要求填入借用資訊 -->
+        <div id="status-loan-group" style="display:none;background:#FFF9E6;border:1px solid #E8C84A;border-radius:6px;padding:10px 12px;margin-top:2px">
+          <div style="font-size:11px;font-weight:600;color:#8a6c00;margin-bottom:8px">📋 借出資訊</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <label class="form-label required" style="font-size:11px">借用人</label>
+              <input class="form-control" id="status-loan-person" placeholder="姓名或單位" maxlength="40">
+            </div>
+            <div>
+              <label class="form-label required" style="font-size:11px">借用日期</label>
+              <input class="form-control" type="date" id="status-loan-date">
+            </div>
+            <div>
+              <label class="form-label required" style="font-size:11px">借用用途</label>
+              <input class="form-control" id="status-loan-purpose" placeholder="借用目的說明" maxlength="80">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:11px">預計歸還日期</label>
+              <input class="form-control" type="date" id="status-loan-return">
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label required">異動原因</label>
@@ -3051,16 +3073,25 @@ window.deleteRecord = async function(type, id, label) {
 };
 
 // ── Status Change ──
-// 「異動至」下拉變更：peri 選「使用中」→ 顯示位置欄位
+// 「異動至」下拉變更：peri 選「使用中」→ 顯示位置欄位；peri/edchw 選「借出」→ 顯示借用資訊
 window.onStatusModalChange = function() {
   if (!statusTarget) return;
-  const val = document.getElementById('status-new-value').value;
-  const locGroup = document.getElementById('status-location-group');
-  if (statusTarget.type === 'peri' && val === '使用中') {
-    locGroup.style.display = 'block';
+  const val     = document.getElementById('status-new-value').value;
+  const locGroup  = document.getElementById('status-location-group');
+  const loanGroup = document.getElementById('status-loan-group');
+  const isDevice  = statusTarget.type === 'peri' || statusTarget.type === 'edchw';
+
+  // 位置欄（peri 使用中）
+  locGroup.style.display = (statusTarget.type === 'peri' && val === '使用中') ? 'block' : 'none';
+  if (locGroup.style.display === 'none') document.getElementById('status-location-input').value = '';
+
+  // 借出資訊欄（peri / edchw 借出）
+  if (isDevice && val === '借出') {
+    loanGroup.style.display = 'block';
   } else {
-    locGroup.style.display = 'none';
-    document.getElementById('status-location-input').value = '';
+    loanGroup.style.display = 'none';
+    ['status-loan-person','status-loan-date','status-loan-purpose','status-loan-return']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   }
 };
 
@@ -3070,6 +3101,10 @@ window.openStatusChange = function(type, id, current) {
   document.getElementById('status-reason').value = '';
   document.getElementById('status-location-input').value = '';
   document.getElementById('status-location-group').style.display = 'none';
+  // 重置借用資訊區塊
+  ['status-loan-person','status-loan-date','status-loan-purpose','status-loan-return']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('status-loan-group').style.display = 'none';
 
   // 依模組類型提供對應的狀態選項
   const sel = document.getElementById('status-new-value');
@@ -3079,14 +3114,19 @@ window.openStatusChange = function(type, id, current) {
   const opts = type === 'peri' ? periOptions : type === 'edchw' ? edchwOptions : defaultOptions;
   sel.innerHTML = opts.map(o => `<option value="${o}"${o===current?' selected':''}>${o}</option>`).join('');
 
-  // 若目前已是「使用中」，開啟時也顯示位置欄位
+  const isDevice = type === 'peri' || type === 'edchw';
+  // 若目前已是「使用中」，開啟時顯示位置欄位
   if (type === 'peri' && current === '使用中') {
     document.getElementById('status-location-group').style.display = 'block';
+  }
+  // 若目前已是「借出」，開啟時顯示借用資訊區塊
+  if (isDevice && current === '借出') {
+    document.getElementById('status-loan-group').style.display = 'block';
   }
 
   // Modal 標題依模組顯示
   const titleEl = document.querySelector('#modal-status .modal-title');
-  if (titleEl) titleEl.textContent = (type === 'peri' || type === 'edchw') ? '設備狀態變更' : '異動狀態';
+  if (titleEl) titleEl.textContent = isDevice ? '設備狀態變更' : '異動狀態';
 
   document.getElementById('modal-status').classList.add('show');
 };
@@ -3108,6 +3148,19 @@ window.confirmStatusChange = async function() {
     }
   }
 
+  // peri / edchw 改為「借出」時，借用資訊必填
+  let loanPayload = null;
+  if ((type === 'peri' || type === 'edchw') && newStatus === '借出') {
+    const person  = document.getElementById('status-loan-person').value.trim();
+    const date    = document.getElementById('status-loan-date').value;
+    const purpose = document.getElementById('status-loan-purpose').value.trim();
+    const ret     = document.getElementById('status-loan-return').value;
+    if (!person)  { showToast('請填寫借用人', 'error'); document.getElementById('status-loan-person').focus(); return; }
+    if (!date)    { showToast('請填寫借用日期', 'error'); document.getElementById('status-loan-date').focus(); return; }
+    if (!purpose) { showToast('請填寫借用用途', 'error'); document.getElementById('status-loan-purpose').focus(); return; }
+    loanPayload = { loan_person: person, loan_date: date, loan_purpose: purpose, loan_return_date: ret || '' };
+  }
+
   const list = await getData(type);
   const record = list.find(r => r.id === id);
   const entityKey = record?.machine_no || record?.tid || record?.asset_no || id;
@@ -3120,6 +3173,7 @@ window.confirmStatusChange = async function() {
     status_change_date: new Date().toISOString().slice(0,10)
   };
   if (locationVal !== null) updatePayload.location = locationVal;
+  if (loanPayload !== null) Object.assign(updatePayload, loanPayload);
 
   await updateData(type, id, updatePayload);
   await addLog({ entity_type: type.toUpperCase(), entity_key: entityKey, change_type: 'STATUS', change_reason: `${current} → ${newStatus}：${reason}`, operator: '操作人員' });
@@ -3130,10 +3184,31 @@ window.confirmStatusChange = async function() {
   if (periStatusEl && type === 'peri') {
     periStatusEl.value = newStatus;
     if (locationVal && periLocEl) periLocEl.value = locationVal;
+    if (loanPayload) {
+      const f = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+      f('peri-loan_person',  loanPayload.loan_person);
+      f('peri-loan_date',    loanPayload.loan_date);
+      f('peri-loan_purpose', loanPayload.loan_purpose);
+      f('peri-loan_return_date', loanPayload.loan_return_date);
+    }
     onPeriStatusChange();
   }
+  // 若EDC刷卡機編輯表單同時開著，同步更新借用資訊
+  const edchwStatusEl = document.getElementById('edchw-status');
+  if (edchwStatusEl && type === 'edchw') {
+    edchwStatusEl.value = newStatus;
+    if (loanPayload) {
+      const f = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+      f('edchw-loan_person',      loanPayload.loan_person);
+      f('edchw-loan_date',        loanPayload.loan_date);
+      f('edchw-loan_purpose',     loanPayload.loan_purpose);
+      f('edchw-loan_return_date', loanPayload.loan_return_date);
+    }
+    onEdchwStatusChange();
+  }
 
-  showToast(`狀態已更新為「${newStatus}」${locationVal ? `，位置：${locationVal}` : ''}`, 'success');
+  const loanNote = loanPayload ? `，借用人：${loanPayload.loan_person}` : '';
+  showToast(`狀態已更新為「${newStatus}」${locationVal ? `，位置：${locationVal}` : ''}${loanNote}`, 'success');
   closeModal('status');
   const refreshFns = { pos: renderPOS, edc: renderEDC, peri: renderPeri, edchw: renderEDCHW };
   if (refreshFns[type]) await refreshFns[type]();
