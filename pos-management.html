@@ -484,7 +484,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v2.9.9 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.0 · 模擬系統</div>
   </div>
 </nav>
 
@@ -733,7 +733,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <thead>
               <tr>
                 <th>用途</th>
-                <th>機型 <span style="font-size:10px;font-weight:400;color:#C0392B;text-decoration:underline;text-decoration-color:#C0392B">紅線代表無線</span></th>
+                <th>機型</th>
                 <th>收單行</th><th>MID</th><th>TID</th><th>IP</th>
                 <th>狀態</th><th>入庫日期</th><th>異動日期</th><th>異動原因</th><th>操作</th>
               </tr>
@@ -1308,7 +1308,6 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <input type="checkbox" id="edchw-is_wireless" onchange="onEdchwWirelessChange()"
               style="width:16px;height:16px;cursor:pointer;accent-color:#C0392B">
             <span>無線刷卡機</span>
-            <span style="font-size:11px;color:#C0392B;font-weight:500">（勾選後IP欄位無需填寫）</span>
           </label>
         </div>
 
@@ -2692,7 +2691,7 @@ window.renderEDCHW = async function() {
     <tr>
       <td>${r.purpose||'—'}</td>
       <td>${r.is_wireless === true || r.is_wireless === 'true'
-        ? `<span style="text-decoration:underline;text-decoration-color:#C0392B;text-decoration-thickness:2px;color:var(--text-pri)">${r.model||'—'}</span>`
+        ? `<span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#27AE60" stroke="none"/></svg>${r.model||'—'}</span>`
         : (r.model||'—')}</td>
       <td>${r.acquirer_bank||'—'}</td>
       <td><span class="num-chip">${r.mid||'—'}</span>${r.mid && MID_LABEL[r.mid] ? `<span style="font-size:11px;color:var(--text-muted);margin-left:4px">（${MID_LABEL[r.mid]}）</span>` : ''}</td>
