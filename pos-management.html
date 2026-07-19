@@ -484,7 +484,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.1 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2 · 模擬系統</div>
   </div>
 </nav>
 
@@ -1232,6 +1232,25 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           </div>
         </div>
 
+        <!-- 維修資訊（設備狀態=維修中時顯示） -->
+        <div id="peri-repair-section" style="display:none;grid-column:1/-1;background:#FFF3E0;border:1px solid #E8A050;border-radius:6px;padding:12px 14px;margin-bottom:4px">
+          <div style="font-size:12px;font-weight:600;color:#7a4500;margin-bottom:10px;letter-spacing:.03em">🔧 維修資訊</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 14px">
+            <div class="form-group" style="margin:0;grid-column:1/-1">
+              <label class="pos-label required">故障原因</label>
+              <input class="pos-control" id="peri-repair_reason" placeholder="請說明故障原因" maxlength="100">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label">寄件日期</label>
+              <input class="pos-control" type="date" id="peri-repair_ship_date">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label">收件日期</label>
+              <input class="pos-control" type="date" id="peri-repair_receive_date">
+            </div>
+          </div>
+        </div>
+
         <!-- 備註 -->
         <div class="form-group" style="grid-column:1/-1">
           <label class="pos-label">備註</label>
@@ -1402,6 +1421,25 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           </div>
         </div>
 
+        <!-- 維修資訊（設備狀態=維修中時顯示） -->
+        <div id="edchw-repair-section" style="display:none;grid-column:1/-1;background:#FFF3E0;border:1px solid #E8A050;border-radius:6px;padding:12px 14px;margin-bottom:4px">
+          <div style="font-size:12px;font-weight:600;color:#7a4500;margin-bottom:10px;letter-spacing:.03em">🔧 維修資訊</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 14px">
+            <div class="form-group" style="margin:0;grid-column:1/-1">
+              <label class="pos-label required">故障原因</label>
+              <input class="pos-control" id="edchw-repair_reason" placeholder="請說明故障原因" maxlength="100">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label">報修日期</label>
+              <input class="pos-control" type="date" id="edchw-repair_report_date">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="pos-label">修復日期</label>
+              <input class="pos-control" type="date" id="edchw-repair_fix_date">
+            </div>
+          </div>
+        </div>
+
         <!-- 加值功能 TID -->
         <div class="pos-section-label">加值功能 TID</div>
 
@@ -1532,6 +1570,26 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <div>
               <label class="form-label" style="font-size:11px">預計歸還日期</label>
               <input class="form-control" type="date" id="status-loan-return">
+            </div>
+          </div>
+        </div>
+        <!-- peri / edchw 維修中時，要求填入維修資訊（欄位標籤依模組動態切換） -->
+        <div id="status-repair-group" style="display:none;background:#FFF3E0;border:1px solid #E8A050;border-radius:6px;padding:10px 12px;margin-top:2px">
+          <div style="font-size:11px;font-weight:600;color:#7a4500;margin-bottom:8px">🔧 維修資訊</div>
+          <div style="display:grid;grid-template-columns:1fr;gap:8px">
+            <div>
+              <label class="form-label required" style="font-size:11px">故障原因</label>
+              <input class="form-control" id="status-repair-reason" placeholder="請說明故障原因" maxlength="100">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div>
+                <label class="form-label" style="font-size:11px" id="status-repair-date1-label">寄件日期</label>
+                <input class="form-control" type="date" id="status-repair-date1">
+              </div>
+              <div>
+                <label class="form-label" style="font-size:11px" id="status-repair-date2-label">收件日期</label>
+                <input class="form-control" type="date" id="status-repair-date2">
+              </div>
             </div>
           </div>
         </div>
@@ -1806,29 +1864,34 @@ window.onEdchwWirelessChange = function() {
 // EDC刷卡機：狀態切換時顯示/隱藏借出資訊區塊
 window.onEdchwStatusChange = function() {
   const status = document.getElementById('edchw-status').value;
-  const section = document.getElementById('edchw-loan-section');
-  if (!section) return;
-  section.style.display = status === '借出' ? 'block' : 'none';
+  const loanSection   = document.getElementById('edchw-loan-section');
+  const repairSection = document.getElementById('edchw-repair-section');
+  if (loanSection)   loanSection.style.display   = status === '借出'   ? 'block' : 'none';
+  if (repairSection) repairSection.style.display = status === '維修中' ? 'block' : 'none';
 };
 
 window.onPeriStatusChange = function() {
   const status = document.getElementById('peri-status').value;
   const locationLabel = document.getElementById('peri-location-label');
   const locationEl = document.getElementById('peri-location');
-  const loanSection = document.getElementById('peri-loan-section');
+  const loanSection   = document.getElementById('peri-loan-section');
+  const repairSection = document.getElementById('peri-repair-section');
 
   // 重置位置標籤
   if (locationLabel) { locationLabel.textContent = '位置'; locationLabel.classList.remove('required'); }
   if (locationEl) locationEl.placeholder = '例：01F-B101';
 
   // 借出區塊
-  if (loanSection) loanSection.style.display = status === '借出' ? 'block' : 'none';
+  if (loanSection)   loanSection.style.display   = status === '借出'   ? 'block' : 'none';
+  // 維修區塊
+  if (repairSection) repairSection.style.display = status === '維修中' ? 'block' : 'none';
 
-  // 使用中：位置欄位改為「位置（POS機號）」必填
+  // 使用中：位置必填、借出時清空位置
   if (status === '使用中') {
     if (locationLabel) { locationLabel.textContent = '位置（POS機號）'; locationLabel.classList.add('required'); }
     if (locationEl) locationEl.placeholder = '請填寫POS機號，例：A00001';
   }
+  if (status === '借出' && locationEl) locationEl.value = '';
 };
 
 // 入庫日期：僅接受4碼數字輸入（MMDD），只過濾非數字字元，年份於儲存時自動補上
@@ -2824,8 +2887,8 @@ async function refreshLogBadge() {
 const MODAL_FIELDS = {
   pos: ['machine_no','model','floor','booth_no','booth_name','ip_addr','status','is_special_counter','pos_type','is_central_collect','start_date','end_date','remark'],
   edc: ['pos_machine_no','special_purpose','tid','start_date','end_date','status','status_change_date'],
-  peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','remark','loan_person','loan_purpose','loan_phone','loan_date','loan_return_date'],
-  edchw: ['purpose','model','is_wireless','acquirer_bank','mid','tid','ip_addr','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark','loan_date','loan_person','loan_phone','loan_purpose','loan_return_date']
+  peri: ['asset_no','dev_type','brand','model_no','location','status','inbound_date','remark','loan_person','loan_purpose','loan_phone','loan_date','loan_return_date','repair_reason','repair_ship_date','repair_receive_date'],
+  edchw: ['purpose','model','is_wireless','acquirer_bank','mid','tid','ip_addr','status','inbound_date','change_date','bonus_tid','installment_tid','unionpay_tid','ae_tid','remark','loan_date','loan_person','loan_phone','loan_purpose','loan_return_date','repair_reason','repair_report_date','repair_fix_date']
 };
 
 window.openModal = function(type) {
@@ -2971,6 +3034,10 @@ window.saveRecord = async function(type) {
       document.getElementById('edchw-loan_purpose').focus(); return;
     }
   }
+  if (type === 'edchw' && data.status === '維修中' && !data.repair_reason) {
+    showToast('狀態為「維修中」時，請填寫故障原因', 'error');
+    document.getElementById('edchw-repair_reason').focus(); return;
+  }
 
   // ── 硬體設備：借出狀態條件式必填 ──
   if (type === 'peri') {
@@ -2991,6 +3058,10 @@ window.saveRecord = async function(type) {
     if (data.status === '使用中' && !data.location) {
       showToast('狀態為「使用中」時，請於位置欄位填入POS機號', 'error');
       document.getElementById('peri-location').focus(); return;
+    }
+    if (data.status === '維修中' && !data.repair_reason) {
+      showToast('狀態為「維修中」時，請填寫故障原因', 'error');
+      document.getElementById('peri-repair_reason').focus(); return;
     }
     if (data.inbound_date) {
       if (data.inbound_date.length !== 4) {
@@ -3076,21 +3147,47 @@ window.deleteRecord = async function(type, id, label) {
 // 「異動至」下拉變更：peri 選「使用中」→ 顯示位置欄位；peri/edchw 選「借出」→ 顯示借用資訊
 window.onStatusModalChange = function() {
   if (!statusTarget) return;
-  const val     = document.getElementById('status-new-value').value;
-  const locGroup  = document.getElementById('status-location-group');
-  const loanGroup = document.getElementById('status-loan-group');
-  const isDevice  = statusTarget.type === 'peri' || statusTarget.type === 'edchw';
+  const val      = document.getElementById('status-new-value').value;
+  const type     = statusTarget.type;
+  const isDevice = type === 'peri' || type === 'edchw';
+  const locGroup    = document.getElementById('status-location-group');
+  const loanGroup   = document.getElementById('status-loan-group');
+  const repairGroup = document.getElementById('status-repair-group');
 
-  // 位置欄（peri 使用中）
-  locGroup.style.display = (statusTarget.type === 'peri' && val === '使用中') ? 'block' : 'none';
+  // ── 位置欄（peri 使用中）──
+  locGroup.style.display = (type === 'peri' && val === '使用中') ? 'block' : 'none';
   if (locGroup.style.display === 'none') document.getElementById('status-location-input').value = '';
 
-  // 借出資訊欄（peri / edchw 借出）
+  // ── 借出時：清空位置欄位 ──
+  if (val === '借出') {
+    document.getElementById('status-location-input').value = '';
+    locGroup.style.display = 'none';
+  }
+
+  // ── 借出資訊區塊 ──
   if (isDevice && val === '借出') {
     loanGroup.style.display = 'block';
   } else {
     loanGroup.style.display = 'none';
     ['status-loan-person','status-loan-date','status-loan-purpose','status-loan-return']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  }
+
+  // ── 維修資訊區塊 ──
+  if (isDevice && val === '維修中') {
+    repairGroup.style.display = 'block';
+    const l1 = document.getElementById('status-repair-date1-label');
+    const l2 = document.getElementById('status-repair-date2-label');
+    if (type === 'peri') {
+      if (l1) l1.textContent = '寄件日期';
+      if (l2) l2.textContent = '收件日期';
+    } else {
+      if (l1) l1.textContent = '報修日期';
+      if (l2) l2.textContent = '修復日期';
+    }
+  } else {
+    repairGroup.style.display = 'none';
+    ['status-repair-reason','status-repair-date1','status-repair-date2']
       .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   }
 };
@@ -3105,6 +3202,10 @@ window.openStatusChange = function(type, id, current) {
   ['status-loan-person','status-loan-date','status-loan-purpose','status-loan-return']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('status-loan-group').style.display = 'none';
+  // 重置維修資訊區塊
+  ['status-repair-reason','status-repair-date1','status-repair-date2']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('status-repair-group').style.display = 'none';
 
   // 依模組類型提供對應的狀態選項
   const sel = document.getElementById('status-new-value');
@@ -3122,6 +3223,14 @@ window.openStatusChange = function(type, id, current) {
   // 若目前已是「借出」，開啟時顯示借用資訊區塊
   if (isDevice && current === '借出') {
     document.getElementById('status-loan-group').style.display = 'block';
+  }
+  // 若目前已是「維修中」，開啟時顯示維修資訊區塊
+  if (isDevice && current === '維修中') {
+    document.getElementById('status-repair-group').style.display = 'block';
+    const l1 = document.getElementById('status-repair-date1-label');
+    const l2 = document.getElementById('status-repair-date2-label');
+    if (type === 'peri') { if (l1) l1.textContent='寄件日期'; if (l2) l2.textContent='收件日期'; }
+    else                 { if (l1) l1.textContent='報修日期'; if (l2) l2.textContent='修復日期'; }
   }
 
   // Modal 標題依模組顯示
@@ -3146,6 +3255,21 @@ window.confirmStatusChange = async function() {
       document.getElementById('status-location-input').focus();
       return;
     }
+  }
+
+  // peri / edchw 改為「維修中」時，維修資訊必填
+  let repairPayload = null;
+  if ((type === 'peri' || type === 'edchw') && newStatus === '維修中') {
+    const repReason = document.getElementById('status-repair-reason').value.trim();
+    const repDate1  = document.getElementById('status-repair-date1').value;
+    const repDate2  = document.getElementById('status-repair-date2').value;
+    if (!repReason) {
+      showToast('請填寫故障原因', 'error');
+      document.getElementById('status-repair-reason').focus(); return;
+    }
+    const d1Label = type === 'peri' ? 'repair_ship_date'   : 'repair_report_date';
+    const d2Label = type === 'peri' ? 'repair_receive_date' : 'repair_fix_date';
+    repairPayload = { repair_reason: repReason, [d1Label]: repDate1 || '', [d2Label]: repDate2 || '' };
   }
 
   // peri / edchw 改為「借出」時，借用資訊必填
@@ -3173,7 +3297,8 @@ window.confirmStatusChange = async function() {
     status_change_date: new Date().toISOString().slice(0,10)
   };
   if (locationVal !== null) updatePayload.location = locationVal;
-  if (loanPayload !== null) Object.assign(updatePayload, loanPayload);
+  if (loanPayload   !== null) Object.assign(updatePayload, loanPayload);
+  if (repairPayload !== null) Object.assign(updatePayload, repairPayload);
 
   await updateData(type, id, updatePayload);
   await addLog({ entity_type: type.toUpperCase(), entity_key: entityKey, change_type: 'STATUS', change_reason: `${current} → ${newStatus}：${reason}`, operator: '操作人員' });
