@@ -484,7 +484,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.1 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.2 · 模擬系統</div>
   </div>
 </nav>
 
@@ -3060,6 +3060,8 @@ window.saveRecord = async function(type) {
       showToast('狀態為「使用中」時，請於位置欄位填入POS機號', 'error');
       document.getElementById('peri-location').focus(); return;
     }
+    // 借出或維修中：強制清空位置欄位（確保資料庫同步）
+    if (data.status === '借出' || data.status === '維修中') data.location = '';
     if (data.status === '維修中' && !data.repair_reason) {
       showToast('狀態為「維修中」時，請填寫故障原因', 'error');
       document.getElementById('peri-repair_reason').focus(); return;
@@ -3297,7 +3299,10 @@ window.confirmStatusChange = async function() {
     change_date: new Date().toISOString().slice(0,10),
     status_change_date: new Date().toISOString().slice(0,10)
   };
+  // 使用中：寫入位置
   if (locationVal !== null) updatePayload.location = locationVal;
+  // 借出或維修中：清空位置（同步寫入資料庫）
+  if (type === 'peri' && (newStatus === '借出' || newStatus === '維修中')) updatePayload.location = '';
   if (loanPayload   !== null) Object.assign(updatePayload, loanPayload);
   if (repairPayload !== null) Object.assign(updatePayload, repairPayload);
 
