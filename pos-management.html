@@ -484,7 +484,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.1 · 模擬系統</div>
   </div>
 </nav>
 
@@ -1891,7 +1891,8 @@ window.onPeriStatusChange = function() {
     if (locationLabel) { locationLabel.textContent = '位置（POS機號）'; locationLabel.classList.add('required'); }
     if (locationEl) locationEl.placeholder = '請填寫POS機號，例：A00001';
   }
-  if (status === '借出' && locationEl) locationEl.value = '';
+  // 借出或維修中：清空位置欄位
+  if ((status === '借出' || status === '維修中') && locationEl) locationEl.value = '';
 };
 
 // 入庫日期：僅接受4碼數字輸入（MMDD），只過濾非數字字元，年份於儲存時自動補上
@@ -3158,8 +3159,8 @@ window.onStatusModalChange = function() {
   locGroup.style.display = (type === 'peri' && val === '使用中') ? 'block' : 'none';
   if (locGroup.style.display === 'none') document.getElementById('status-location-input').value = '';
 
-  // ── 借出時：清空位置欄位 ──
-  if (val === '借出') {
+  // ── 借出或維修中時：清空位置欄位 ──
+  if (val === '借出' || val === '維修中') {
     document.getElementById('status-location-input').value = '';
     locGroup.style.display = 'none';
   }
