@@ -484,7 +484,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.2 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.3 · 模擬系統</div>
   </div>
 </nav>
 
@@ -2510,7 +2510,9 @@ window.openTopoModal = async function(posId, machineNo, boothName) {
     </div>`;
   };
 
-  // POS主機節點
+  // POS主機節點：從硬體設備主檔查詢對應的資產編號
+  const posHwRecord = periList.find(p => p.dev_type === 'POS主機' && p.location === machineNo);
+  const posAssetNo  = posHwRecord?.asset_no || '';
   const posStatus = posRecord.status || '啟用';
   const posSc = sClass(posStatus);
   const posNode = `<div class="topo-node center" style="left:50%;top:50%;transform:translate(-50%,-50%)"
@@ -2519,6 +2521,7 @@ window.openTopoModal = async function(posId, machineNo, boothName) {
       <div class="topo-icon ${posSc}">🖥️</div>
       <div class="topo-name">${machineNo}</div>
       <div class="topo-sub">${posRecord.model||''} ${posRecord.booth_name||''}</div>
+      ${posAssetNo ? `<div class="topo-sub" style="font-size:9px;color:var(--text-muted)">${posAssetNo}</div>` : ''}
       <div style="font-size:11px;margin-top:2px;color:${posSc==='s-on'?'#27AE60':'#889'}">${posStatus}</div>
     </div>
   </div>`;
