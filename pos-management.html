@@ -484,7 +484,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.3 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.5 · 模擬系統</div>
   </div>
 </nav>
 
@@ -788,12 +788,19 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
     <!-- ─ LOG ─ -->
     <div class="page" id="page-log">
       <div class="filter-bar">
-        <select class="form-control" id="log-type-filter" onchange="renderLog()">
+        <select class="form-control" id="log-category-filter" onchange="onLogCategoryChange()" style="width:120px">
           <option value="">全部類型</option>
-          <option value="POS">POS收銀機</option>
-          <option value="EDC">POS-EDC關聯</option>
-          <option value="PERI">POS硬體設備</option>
-          <option value="EDCHW">EDC刷卡機</option>
+          <optgroup label="── 軟體 ──">
+            <option value="POS">POS收銀機</option>
+            <option value="EDC">POS-EDC關聯</option>
+          </optgroup>
+          <optgroup label="── 硬體 ──">
+            <option value="PERI">POS硬體設備</option>
+            <option value="EDCHW">EDC刷卡機</option>
+          </optgroup>
+        </select>
+        <select class="form-control" id="log-sub-filter" onchange="renderLog()" style="width:150px;display:none">
+          <option value="">全部細項</option>
         </select>
         <select class="form-control" id="log-action-filter" onchange="renderLog()">
           <option value="">全部異動</option>
@@ -2516,7 +2523,7 @@ window.openTopoModal = async function(posId, machineNo, boothName) {
   const posStatus = posRecord.status || '啟用';
   const posSc = sClass(posStatus);
   const posNode = `<div class="topo-node center" style="left:50%;top:50%;transform:translate(-50%,-50%)"
-    onclick="showTopoDetail(this,'POS主機',decodeURIComponent('${encodeURIComponent(JSON.stringify([posRecord]))}'))">
+    onclick="showTopoDetail(this,'POS主機',decodeURIComponent('${encodeURIComponent(JSON.stringify([{ ...posRecord, asset_no: posAssetNo }]))}'))">
     <div class="topo-card ${posSc}">
       <div class="topo-icon ${posSc}">🖥️</div>
       <div class="topo-name">${machineNo}</div>
@@ -2854,17 +2861,66 @@ window.renderLoan = async function() {
   </tr>`).join('');
 };
 
-window.renderLog = async function() {
-  const list = await getData('log');
-  const typeF = document.getElementById('log-type-filter').value;
-  const actionF = document.getElementById('log-action-filter').value;
-  let filtered = list.filter(r =>
-    (!typeF || r.entity_type === typeF) && (!actionF || r.change_type === actionF)
-  );
-  document.getElementById('log-count').textContent = `共 ${filtered.length} 筆`;
+// 異動歷程：大類切換時動態填入細項下拉
+window.onLogCategoryChange = async function() {
+  const cat    = document.getElementById('log-category-filter').value;
+  const subSel = document.getElementById('log-sub-filter');
 
+  // 軟體類（POS/EDC）無細項，隱藏細項下拉
+  if (!cat || cat === 'POS' || cat === 'EDC') {
+    subSel.style.display = 'none';
+    subSel.innerHTML = '<option value="">全部細項</option>';
+    renderLog();
+    return;
+  }
+
+  // 硬體類：從資料庫取得已存在的細項
+  const [periList, edchwList] = await Promise.all([getData('peri'), getData('edchw')]);
+  let opts = ['<option value="">全部細項</option>'];
+
+  if (cat === 'PERI') {
+    // POS硬體設備：依設備類型
+    const types = [...new Set(periList.map(p => p.dev_type).filter(Boolean))].sort();
+    types.forEach(t => { opts.push(`<option value="${t}">${t}</option>`); });
+  } else if (cat === 'EDCHW') {
+    // EDC刷卡機：依機型
+    const models = [...new Set(edchwList.map(e => e.model).filter(Boolean))].sort();
+    models.forEach(m => { opts.push(`<option value="${m}">${m}</option>`); });
+  }
+
+  subSel.innerHTML = opts.join('');
+  subSel.style.display = 'inline-block';
+  renderLog();
+};
+
+window.renderLog = async function() {
+  const [list, periList, edchwList] = await Promise.all([getData('log'), getData('peri'), getData('edchw')]);
+  const cat     = document.getElementById('log-category-filter').value;
+  const subVal  = document.getElementById('log-sub-filter').value;
+  const actionF = document.getElementById('log-action-filter').value;
+
+  let filtered = list.filter(r => {
+    // 大類篩選
+    if (cat && r.entity_type !== cat) return false;
+    // 異動類型篩選
+    if (actionF && r.change_type !== actionF) return false;
+    // 細項篩選（只有硬體類有細項）
+    if (subVal && cat === 'PERI') {
+      // 從硬體設備主檔，依 entity_key（資產編號）查對應的設備類型
+      const record = periList.find(p => p.asset_no === r.entity_key);
+      if (!record || record.dev_type !== subVal) return false;
+    }
+    if (subVal && cat === 'EDCHW') {
+      // 從EDC刷卡機主檔，依 entity_key（TID）查對應的機型
+      const record = edchwList.find(e => e.tid === r.entity_key);
+      if (!record || record.model !== subVal) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('log-count').textContent = `共 ${filtered.length} 筆`;
   const actionLabel = { CREATE:'🆕 新增', UPDATE:'✏️ 修改', STATUS:'🔄 狀態', DELETE:'🗑 刪除' };
-  const typeLabel = { POS:'POS收銀機', EDC:'POS-EDC關聯', PERI:'POS硬體設備', EDCHW:'EDC刷卡機' };
+  const typeLabel   = { POS:'POS收銀機', EDC:'POS-EDC關聯', PERI:'POS硬體設備', EDCHW:'EDC刷卡機' };
 
   const tbody = document.getElementById('log-tbody');
   if (filtered.length === 0) {
