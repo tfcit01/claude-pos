@@ -484,7 +484,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.5 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.6 · 模擬系統</div>
   </div>
 </nav>
 
@@ -2922,20 +2922,30 @@ window.renderLog = async function() {
   const actionLabel = { CREATE:'🆕 新增', UPDATE:'✏️ 修改', STATUS:'🔄 狀態', DELETE:'🗑 刪除' };
   const typeLabel   = { POS:'POS收銀機', EDC:'POS-EDC關聯', PERI:'POS硬體設備', EDCHW:'EDC刷卡機' };
 
+  // 細項篩選時，建立 entity_key → 細項名稱的對照（用於顯示）
+  const subKeyMap = {};
+  if (cat === 'PERI' && subVal) {
+    periList.filter(p => p.dev_type === subVal).forEach(p => { if (p.asset_no) subKeyMap[p.asset_no] = subVal; });
+  } else if (cat === 'EDCHW' && subVal) {
+    edchwList.filter(e => e.model === subVal).forEach(e => { if (e.tid) subKeyMap[e.tid] = subVal; });
+  }
+
   const tbody = document.getElementById('log-tbody');
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📋</div><p>尚無異動紀錄</p></div></td></tr>`;
     return;
   }
-  tbody.innerHTML = filtered.map(r => `
-    <tr>
+  tbody.innerHTML = filtered.map(r => {
+    const displayType = subKeyMap[r.entity_key] || typeLabel[r.entity_type] || r.entity_type;
+    return `<tr>
       <td style="white-space:nowrap;font-size:12px">${fmtTime(r.createdAt)}</td>
-      <td><span class="badge badge-stock">${typeLabel[r.entity_type]||r.entity_type}</span></td>
+      <td><span class="badge badge-stock">${displayType}</span></td>
       <td><span class="num-chip">${r.entity_key||'—'}</span></td>
       <td>${actionLabel[r.change_type]||r.change_type}</td>
       <td style="max-width:200px;font-size:12px;color:var(--text-sec)">${r.change_reason||'—'}</td>
       <td style="font-size:12px">${r.operator||'系統'}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 };
 
 async function refreshLogBadge() {
