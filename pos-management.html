@@ -484,7 +484,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.7 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.8 · 模擬系統</div>
   </div>
 </nav>
 
@@ -2923,7 +2923,7 @@ window.renderLog = async function() {
   const typeLabel   = { POS:'POS收銀機', EDC:'POS-EDC關聯', PERI:'POS硬體設備', EDCHW:'EDC刷卡機' };
 
   // 建立 entity_key → 顯示名稱 對照表
-  // PERI：顯示「設備類型 · 型號」；EDCHW 有細項篩選時顯示機型
+  // PERI：顯示「設備類型 · 型號」；EDCHW：顯示「收單行 · 機型」
   const subKeyMap = {};
   if (cat === 'PERI' || !cat) {
     periList.forEach(p => {
@@ -2933,8 +2933,13 @@ window.renderLog = async function() {
       }
     });
   }
-  if ((cat === 'EDCHW' || !cat) && subVal) {
-    edchwList.filter(e => e.model === subVal).forEach(e => { if (e.tid) subKeyMap[e.tid] = subVal; });
+  if (cat === 'EDCHW' || !cat) {
+    edchwList.forEach(e => {
+      if (e.tid) {
+        const label = [e.acquirer_bank, e.model].filter(Boolean).join(' · ');
+        subKeyMap[e.tid] = label || 'EDC刷卡機';
+      }
+    });
   }
 
   const tbody = document.getElementById('log-tbody');
