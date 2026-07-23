@@ -485,7 +485,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.3.2 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.3.3 · 模擬系統</div>
   </div>
 </nav>
 
@@ -2878,9 +2878,14 @@ window.exportLogExcel = async function() {
     if (actionF && r.change_type !== actionF) return false;
     if (keySearch && !(r.entity_key||'').toLowerCase().includes(keySearch)) return false;
     if (dateFrom || dateTo) {
-      const recDate = fmtDate(r.createdAt);
-      if (dateFrom && recDate < dateFrom) return false;
-      if (dateTo   && recDate > dateTo)   return false;
+      let recMs = 0;
+      if (r.createdAt && typeof r.createdAt === 'object' && r.createdAt.seconds) {
+        recMs = r.createdAt.seconds * 1000;
+      } else if (r.createdAt) {
+        recMs = new Date(r.createdAt).getTime();
+      }
+      if (dateFrom) { const fromMs = new Date(dateFrom + 'T00:00:00').getTime(); if (recMs < fromMs) return false; }
+      if (dateTo)   { const toMs   = new Date(dateTo   + 'T23:59:59').getTime(); if (recMs > toMs)   return false; }
     }
     if (subVal && cat === 'PERI') {
       const rec = periList.find(p => p.asset_no === r.entity_key);
@@ -3010,11 +3015,22 @@ window.renderLog = async function() {
     if (actionF && r.change_type !== actionF) return false;
     // 資產編號 / TID 關鍵字搜尋
     if (keySearch && !(r.entity_key||'').toLowerCase().includes(keySearch)) return false;
-    // 日期區間篩選
+    // 日期區間篩選（用 ms 時間戳比對，避免格式問題）
     if (dateFrom || dateTo) {
-      const recDate = fmtDate(r.createdAt);
-      if (dateFrom && recDate < dateFrom) return false;
-      if (dateTo   && recDate > dateTo)   return false;
+      let recMs = 0;
+      if (r.createdAt && typeof r.createdAt === 'object' && r.createdAt.seconds) {
+        recMs = r.createdAt.seconds * 1000;
+      } else if (r.createdAt) {
+        recMs = new Date(r.createdAt).getTime();
+      }
+      if (dateFrom) {
+        const fromMs = new Date(dateFrom + 'T00:00:00').getTime();
+        if (recMs < fromMs) return false;
+      }
+      if (dateTo) {
+        const toMs = new Date(dateTo + 'T23:59:59').getTime();
+        if (recMs > toMs) return false;
+      }
     }
     // 細項篩選（只有硬體類有細項）
     if (subVal && cat === 'PERI') {
