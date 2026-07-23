@@ -437,6 +437,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
   .sidebar { width: 180px; min-width: 180px; }
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -484,7 +485,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.2.8 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.3 · 模擬系統</div>
   </div>
 </nav>
 
@@ -760,6 +761,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <option value="edchw">EDC刷卡機</option>
           </select>
           <span id="loan-count" style="font-size:12px;color:var(--text-muted)"></span>
+          <button class="btn btn-outline btn-sm" onclick="exportLoanExcel()" style="white-space:nowrap">📥 匯出 Excel</button>
         </div>
       </div>
       <div class="card">
@@ -809,6 +811,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
           <option value="STATUS">狀態異動</option>
           <option value="DELETE">刪除</option>
         </select>
+        <button class="btn btn-outline btn-sm" onclick="exportLogExcel()" style="white-space:nowrap">📥 匯出 Excel</button>
       </div>
       <div class="card">
         <div class="card-header">
@@ -2807,6 +2810,91 @@ window.renderEDCHW = async function() {
 
 // ── Log ──
 // ── 借用清冊 ──
+// ── 匯出工具函式 ──
+function xlsxDownload(rows, headers, sheetName, fileName) {
+  if (!window.XLSX) { showToast('Excel 匯出模組尚未載入，請稍後再試', 'error'); return; }
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  // 自動欄寬
+  ws['!cols'] = headers.map((h, i) => ({
+    wch: Math.max(h.length * 2, ...rows.map(r => String(r[i]||'').length)) + 2
+  }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, fileName);
+}
+
+// ── 借用清冊匯出 ──
+window.exportLoanExcel = async function() {
+  const typeFilter = document.getElementById('loan-type-filter')?.value || '';
+  const [periList, edchwList] = await Promise.all([getData('peri'), getData('edchw')]);
+  const periLoaned  = periList.filter(p => p.status === '借出')
+    .map(p => ({ ...p, _type:'POS硬體設備', _id: p.asset_no||p.id, _model: [p.dev_type, p.model_no].filter(Boolean).join(' · ') }));
+  const edchwLoaned = edchwList.filter(e => e.status === '借出')
+    .map(e => ({ ...e, _type:'EDC刷卡機', _id: e.tid||e.id, _model: [e.acquirer_bank, e.model].filter(Boolean).join(' · ') }));
+  let combined = [...periLoaned, ...edchwLoaned];
+  if (typeFilter) combined = combined.filter(r => r._type === (typeFilter === 'peri' ? 'POS硬體設備' : 'EDC刷卡機'));
+  combined.sort((a, b) => (b.loan_date||'').localeCompare(a.loan_date||''));
+
+  const headers = ['類型','識別（資產編號/TID）','型號','借用人','借用用途','借用日期','預計歸還日期','聯絡電話'];
+  const rows = combined.map(r => [
+    r._type, r._id, r._model,
+    r.loan_person||'', r.loan_purpose||'',
+    fmtDate(r.loan_date), fmtDate(r.loan_return_date),
+    r.loan_phone||''
+  ]);
+  const today = new Date().toLocaleDateString('zh-TW').replace(/\//g,'-');
+  xlsxDownload(rows, headers, '借用清冊', `借用清冊_${today}.xlsx`);
+  showToast(`已匯出 ${rows.length} 筆借用清冊`, 'success');
+};
+
+// ── 異動歷程紀錄匯出 ──
+window.exportLogExcel = async function() {
+  const [list, periList, edchwList] = await Promise.all([getData('log'), getData('peri'), getData('edchw')]);
+  const cat     = document.getElementById('log-category-filter').value;
+  const subVal  = document.getElementById('log-sub-filter').value;
+  const actionF = document.getElementById('log-action-filter').value;
+
+  // 建立對照表（同 renderLog 邏輯）
+  const subKeyMap = {};
+  if (cat === 'PERI' || !cat) {
+    periList.forEach(p => { if (p.asset_no) subKeyMap[p.asset_no] = [p.dev_type, p.model_no].filter(Boolean).join(' · ') || 'POS硬體設備'; });
+  }
+  if (cat === 'EDCHW' || !cat) {
+    edchwList.forEach(e => { if (e.tid) subKeyMap[e.tid] = [e.acquirer_bank, e.model].filter(Boolean).join(' · ') || 'EDC刷卡機'; });
+  }
+
+  const typeLabel = { POS:'POS收銀機', EDC:'POS-EDC關聯', PERI:'POS硬體設備', EDCHW:'EDC刷卡機' };
+  const actionLabel = { CREATE:'新增', UPDATE:'修改', STATUS:'狀態異動', DELETE:'刪除' };
+
+  let filtered = list.filter(r => {
+    if (cat && r.entity_type !== cat) return false;
+    if (actionF && r.change_type !== actionF) return false;
+    if (subVal && cat === 'PERI') {
+      const rec = periList.find(p => p.asset_no === r.entity_key);
+      if (!rec || rec.dev_type !== subVal) return false;
+    }
+    if (subVal && cat === 'EDCHW') {
+      const rec = edchwList.find(e => e.tid === r.entity_key);
+      if (!rec || rec.model !== subVal) return false;
+    }
+    return true;
+  });
+
+  const headers = ['異動時間','對象類型','對象識別','異動類型','異動原因','操作人員'];
+  const rows = filtered.map(r => [
+    fmtTime(r.createdAt),
+    subKeyMap[r.entity_key] || typeLabel[r.entity_type] || r.entity_type,
+    r.entity_key||'',
+    actionLabel[r.change_type] || r.change_type,
+    r.change_reason||'',
+    r.operator||'系統'
+  ]);
+  const today = new Date().toLocaleDateString('zh-TW').replace(/\//g,'-');
+  const catName = cat ? (typeLabel[cat]||cat) : '全部';
+  xlsxDownload(rows, headers, '異動歷程紀錄', `異動歷程紀錄_${catName}_${today}.xlsx`);
+  showToast(`已匯出 ${rows.length} 筆異動紀錄`, 'success');
+};
+
 window.renderLoan = async function() {
   const typeFilter = document.getElementById('loan-type-filter')?.value || '';
   const [periList, edchwList] = await Promise.all([getData('peri'), getData('edchw')]);
