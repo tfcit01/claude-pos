@@ -485,7 +485,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.3 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.3.2 · 模擬系統</div>
   </div>
 </nav>
 
@@ -790,6 +790,10 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
     <!-- ─ LOG ─ -->
     <div class="page" id="page-log">
       <div class="filter-bar">
+        <input class="form-control" id="log-key-search" placeholder="🔍 資產編號 / TID" oninput="renderLog()" style="width:180px" maxlength="30">
+        <input class="form-control" type="date" id="log-date-from" onchange="renderLog()" title="起始日期">
+        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">～</span>
+        <input class="form-control" type="date" id="log-date-to" onchange="renderLog()" title="截止日期">
         <select class="form-control" id="log-category-filter" onchange="onLogCategoryChange()" style="width:120px">
           <option value="">全部類型</option>
           <optgroup label="── 軟體 ──">
@@ -2853,6 +2857,9 @@ window.exportLogExcel = async function() {
   const cat     = document.getElementById('log-category-filter').value;
   const subVal  = document.getElementById('log-sub-filter').value;
   const actionF = document.getElementById('log-action-filter').value;
+  const keySearch = (document.getElementById('log-key-search')?.value || '').trim().toLowerCase();
+  const dateFrom  = document.getElementById('log-date-from')?.value || '';
+  const dateTo    = document.getElementById('log-date-to')?.value || '';
 
   // 建立對照表（同 renderLog 邏輯）
   const subKeyMap = {};
@@ -2869,6 +2876,12 @@ window.exportLogExcel = async function() {
   let filtered = list.filter(r => {
     if (cat && r.entity_type !== cat) return false;
     if (actionF && r.change_type !== actionF) return false;
+    if (keySearch && !(r.entity_key||'').toLowerCase().includes(keySearch)) return false;
+    if (dateFrom || dateTo) {
+      const recDate = fmtDate(r.createdAt);
+      if (dateFrom && recDate < dateFrom) return false;
+      if (dateTo   && recDate > dateTo)   return false;
+    }
     if (subVal && cat === 'PERI') {
       const rec = periList.find(p => p.asset_no === r.entity_key);
       if (!rec || rec.dev_type !== subVal) return false;
@@ -2983,23 +2996,32 @@ window.onLogCategoryChange = async function() {
 
 window.renderLog = async function() {
   const [list, periList, edchwList] = await Promise.all([getData('log'), getData('peri'), getData('edchw')]);
-  const cat     = document.getElementById('log-category-filter').value;
-  const subVal  = document.getElementById('log-sub-filter').value;
-  const actionF = document.getElementById('log-action-filter').value;
+  const cat      = document.getElementById('log-category-filter').value;
+  const subVal   = document.getElementById('log-sub-filter').value;
+  const actionF  = document.getElementById('log-action-filter').value;
+  const keySearch = (document.getElementById('log-key-search')?.value || '').trim().toLowerCase();
+  const dateFrom  = document.getElementById('log-date-from')?.value || '';
+  const dateTo    = document.getElementById('log-date-to')?.value || '';
 
   let filtered = list.filter(r => {
     // 大類篩選
     if (cat && r.entity_type !== cat) return false;
     // 異動類型篩選
     if (actionF && r.change_type !== actionF) return false;
+    // 資產編號 / TID 關鍵字搜尋
+    if (keySearch && !(r.entity_key||'').toLowerCase().includes(keySearch)) return false;
+    // 日期區間篩選
+    if (dateFrom || dateTo) {
+      const recDate = fmtDate(r.createdAt);
+      if (dateFrom && recDate < dateFrom) return false;
+      if (dateTo   && recDate > dateTo)   return false;
+    }
     // 細項篩選（只有硬體類有細項）
     if (subVal && cat === 'PERI') {
-      // 從硬體設備主檔，依 entity_key（資產編號）查對應的設備類型
       const record = periList.find(p => p.asset_no === r.entity_key);
       if (!record || record.dev_type !== subVal) return false;
     }
     if (subVal && cat === 'EDCHW') {
-      // 從EDC刷卡機主檔，依 entity_key（TID）查對應的機型
       const record = edchwList.find(e => e.tid === r.entity_key);
       if (!record || record.model !== subVal) return false;
     }
