@@ -485,7 +485,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.3.3 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.3.4 · 模擬系統</div>
   </div>
 </nav>
 
@@ -805,8 +805,11 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
             <option value="EDCHW">EDC刷卡機</option>
           </optgroup>
         </select>
-        <select class="form-control" id="log-sub-filter" onchange="renderLog()" style="width:150px;display:none">
+        <select class="form-control" id="log-sub-filter" onchange="onLogSubChange()" style="width:150px;display:none">
           <option value="">全部細項</option>
+        </select>
+        <select class="form-control" id="log-model-filter" onchange="renderLog()" style="width:150px;display:none">
+          <option value="">全部型號</option>
         </select>
         <select class="form-control" id="log-action-filter" onchange="renderLog()">
           <option value="">全部異動</option>
@@ -2856,6 +2859,7 @@ window.exportLogExcel = async function() {
   const [list, periList, edchwList] = await Promise.all([getData('log'), getData('peri'), getData('edchw')]);
   const cat     = document.getElementById('log-category-filter').value;
   const subVal  = document.getElementById('log-sub-filter').value;
+  const modelVal = (document.getElementById('log-model-filter')?.value || '');
   const actionF = document.getElementById('log-action-filter').value;
   const keySearch = (document.getElementById('log-key-search')?.value || '').trim().toLowerCase();
   const dateFrom  = document.getElementById('log-date-from')?.value || '';
@@ -2890,6 +2894,7 @@ window.exportLogExcel = async function() {
     if (subVal && cat === 'PERI') {
       const rec = periList.find(p => p.asset_no === r.entity_key);
       if (!rec || rec.dev_type !== subVal) return false;
+      if (modelVal && rec.model_no !== modelVal) return false;
     }
     if (subVal && cat === 'EDCHW') {
       const rec = edchwList.find(e => e.tid === r.entity_key);
@@ -2967,12 +2972,16 @@ window.renderLoan = async function() {
   </tr>`).join('');
 };
 
-// 異動歷程：大類切換時動態填入細項下拉
+// 大類切換：填入細項下拉，隱藏型號下拉
 window.onLogCategoryChange = async function() {
   const cat    = document.getElementById('log-category-filter').value;
   const subSel = document.getElementById('log-sub-filter');
+  const modSel = document.getElementById('log-model-filter');
 
-  // 軟體類（POS/EDC）無細項，隱藏細項下拉
+  // 重置型號下拉
+  modSel.style.display = 'none';
+  modSel.innerHTML = '<option value="">全部型號</option>';
+
   if (!cat || cat === 'POS' || cat === 'EDC') {
     subSel.style.display = 'none';
     subSel.innerHTML = '<option value="">全部細項</option>';
@@ -2980,18 +2989,15 @@ window.onLogCategoryChange = async function() {
     return;
   }
 
-  // 硬體類：從資料庫取得已存在的細項
   const [periList, edchwList] = await Promise.all([getData('peri'), getData('edchw')]);
   let opts = ['<option value="">全部細項</option>'];
 
   if (cat === 'PERI') {
-    // POS硬體設備：依設備類型
     const types = [...new Set(periList.map(p => p.dev_type).filter(Boolean))].sort();
-    types.forEach(t => { opts.push(`<option value="${t}">${t}</option>`); });
+    types.forEach(t => opts.push(`<option value="${t}">${t}</option>`));
   } else if (cat === 'EDCHW') {
-    // EDC刷卡機：依機型
     const models = [...new Set(edchwList.map(e => e.model).filter(Boolean))].sort();
-    models.forEach(m => { opts.push(`<option value="${m}">${m}</option>`); });
+    models.forEach(m => opts.push(`<option value="${m}">${m}</option>`));
   }
 
   subSel.innerHTML = opts.join('');
@@ -2999,43 +3005,56 @@ window.onLogCategoryChange = async function() {
   renderLog();
 };
 
+// 細項切換：若為 PERI，動態填入該類型的型號下拉
+window.onLogSubChange = async function() {
+  const cat    = document.getElementById('log-category-filter').value;
+  const subVal = document.getElementById('log-sub-filter').value;
+  const modSel = document.getElementById('log-model-filter');
+
+  // 只有 PERI 類有型號細分
+  if (cat === 'PERI' && subVal) {
+    const periList = await getData('peri');
+    const models = [...new Set(
+      periList.filter(p => p.dev_type === subVal).map(p => p.model_no).filter(Boolean)
+    )].sort();
+    let opts = ['<option value="">全部型號</option>'];
+    models.forEach(m => opts.push(`<option value="${m}">${m}</option>`));
+    modSel.innerHTML = opts.join('');
+    modSel.style.display = models.length > 0 ? 'inline-block' : 'none';
+  } else {
+    modSel.innerHTML = '<option value="">全部型號</option>';
+    modSel.style.display = 'none';
+  }
+  renderLog();
+};
+
 window.renderLog = async function() {
   const [list, periList, edchwList] = await Promise.all([getData('log'), getData('peri'), getData('edchw')]);
   const cat      = document.getElementById('log-category-filter').value;
   const subVal   = document.getElementById('log-sub-filter').value;
+  const modelVal = (document.getElementById('log-model-filter')?.value || '');
   const actionF  = document.getElementById('log-action-filter').value;
   const keySearch = (document.getElementById('log-key-search')?.value || '').trim().toLowerCase();
   const dateFrom  = document.getElementById('log-date-from')?.value || '';
   const dateTo    = document.getElementById('log-date-to')?.value || '';
 
   let filtered = list.filter(r => {
-    // 大類篩選
     if (cat && r.entity_type !== cat) return false;
-    // 異動類型篩選
     if (actionF && r.change_type !== actionF) return false;
-    // 資產編號 / TID 關鍵字搜尋
     if (keySearch && !(r.entity_key||'').toLowerCase().includes(keySearch)) return false;
-    // 日期區間篩選（用 ms 時間戳比對，避免格式問題）
     if (dateFrom || dateTo) {
       let recMs = 0;
       if (r.createdAt && typeof r.createdAt === 'object' && r.createdAt.seconds) {
         recMs = r.createdAt.seconds * 1000;
-      } else if (r.createdAt) {
-        recMs = new Date(r.createdAt).getTime();
-      }
-      if (dateFrom) {
-        const fromMs = new Date(dateFrom + 'T00:00:00').getTime();
-        if (recMs < fromMs) return false;
-      }
-      if (dateTo) {
-        const toMs = new Date(dateTo + 'T23:59:59').getTime();
-        if (recMs > toMs) return false;
-      }
+      } else if (r.createdAt) { recMs = new Date(r.createdAt).getTime(); }
+      if (dateFrom) { const fromMs = new Date(dateFrom + 'T00:00:00').getTime(); if (recMs < fromMs) return false; }
+      if (dateTo)   { const toMs   = new Date(dateTo   + 'T23:59:59').getTime(); if (recMs > toMs)   return false; }
     }
-    // 細項篩選（只有硬體類有細項）
     if (subVal && cat === 'PERI') {
       const record = periList.find(p => p.asset_no === r.entity_key);
       if (!record || record.dev_type !== subVal) return false;
+      // 型號篩選
+      if (modelVal && record.model_no !== modelVal) return false;
     }
     if (subVal && cat === 'EDCHW') {
       const record = edchwList.find(e => e.tid === r.entity_key);
