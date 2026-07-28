@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>POS設備管理系統 v3.4.3 — Taipei 101</title>
+<title>POS設備管理系統 v3.4.4 — Taipei 101</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -527,7 +527,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.4.3 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.4.4 · 模擬系統</div>
   </div>
 </nav>
 
@@ -2081,16 +2081,37 @@ async function initFirebase(cfg) {
     if (apps.length > 0) await deleteApp(apps[0]);
     const app = initializeApp(cfg);
     db = getFirestore(app);
-    // Test connection
-    await getDocs(collection(db, 'pos_machines'));
     useFirebase = true;
+
+    // 測試連線：permission-denied 也算連線成功（Firebase 有回應，只是 Rules 限制）
+    try {
+      await getDocs(collection(db, 'pos_machines'));
+    } catch (testErr) {
+      if (testErr.code === 'permission-denied') {
+        console.warn('Firestore Rules 限制讀取，但 Firebase 連線正常');
+        setFBStatus(true);
+        return true;
+      }
+      throw testErr;
+    }
+
     setFBStatus(true);
     return true;
   } catch (e) {
-    console.error('Firebase error:', e);
+    console.error('Firebase error:', e.code, e.message);
     useFirebase = false;
     db = null;
-    setFBStatus(false, e.message);
+
+    // 根據錯誤類型給出更明確的提示
+    let hint = e.message;
+    if (e.code === 'auth/invalid-api-key' || (e.message||'').includes('api-key')) {
+      hint = 'API Key 無效，請重新確認';
+    } else if ((e.message||'').includes('project') || e.code === 'not-found') {
+      hint = 'Project ID 錯誤，找不到此 Firebase 專案';
+    } else if ((e.message||'').includes('network') || (e.message||'').includes('fetch')) {
+      hint = '網路連線異常，請確認網路是否正常';
+    }
+    setFBStatus(false, hint);
     return false;
   }
 }
@@ -3810,8 +3831,14 @@ window.saveFirebaseConfig = async function() {
     statusEl.innerHTML = '<span style="color:var(--success);font-size:13px">✅ 連線成功，設定已儲存</span>';
     showToast('Firebase 連線成功', 'success');
   } else {
-    statusEl.innerHTML = '<span style="color:var(--danger);font-size:13px">❌ 連線失敗，請確認設定值。系統將使用 LocalStorage 模式。</span>';
-    showToast('Firebase 連線失敗', 'error');
+    // 從 fb-status-txt 取得詳細錯誤說明
+    const errTxt = document.getElementById('fb-status-txt')?.title || '';
+    const errDetail = errTxt ? `<br><span style="font-size:11px;color:#888">錯誤：${errTxt}</span>` : '';
+    statusEl.innerHTML = `<span style="color:var(--danger);font-size:13px">❌ 連線失敗，請確認設定值。系統將使用 LocalStorage 模式。${errDetail}</span>
+      <div style="margin-top:8px;font-size:11px;color:#888">
+        💡 請開啟瀏覽器開發工具（F12）→ Console，查看詳細錯誤訊息
+      </div>`;
+    showToast('Firebase 連線失敗，請查看詳細錯誤', 'error');
   }
 };
 
