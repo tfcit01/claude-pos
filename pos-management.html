@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>POS設備管理系統 v3.4.2 — Taipei 101</title>
+<title>POS設備管理系統 v3.4.3 — Taipei 101</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -527,7 +527,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.4.2 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.4.3 · 模擬系統</div>
   </div>
 </nav>
 
@@ -3795,6 +3795,13 @@ window.saveFirebaseConfig = async function() {
     appId: document.getElementById('cfg-appId').value.trim(),
   };
   if (!cfg.apiKey || !cfg.projectId) { showToast('請至少填寫 API Key 和 Project ID', 'error'); return; }
+  // API Key 格式驗證（Firebase API Key 固定以 AIzaSy 開頭）
+  if (!cfg.apiKey.startsWith('AIzaSy')) {
+    showToast('API Key 格式不正確，應以「AIzaSy」開頭（注意第二個字母是大寫 I，非小寫 l）', 'error');
+    document.getElementById('cfg-apiKey').style.borderColor = '#E74C3C';
+    return;
+  }
+  document.getElementById('cfg-apiKey').style.borderColor = '';
   const statusEl = document.getElementById('cfg-status');
   statusEl.innerHTML = '<span style="color:var(--text-muted);font-size:13px">🔄 連線測試中…</span>';
   const ok = await initFirebase(cfg);
@@ -3898,13 +3905,16 @@ window.showToast = function(msg, type='info') {
 
 // ── Init ──
 async function init() {
-  await initAuth(); // 先執行登入驗證
+  // 1. 先初始化 Firebase（auth 讀密碼需要 db）
   const cfg = loadFBConfig();
   if (cfg && cfg.apiKey) {
     await initFirebase(cfg);
   } else {
     setFBStatus(false);
   }
+  // 2. 再顯示登入畫面（此時 db 已就緒）
+  await initAuth();
+  // 3. 登入後才載入資料
   await refreshDashboard();
   await refreshLogBadge();
 }
