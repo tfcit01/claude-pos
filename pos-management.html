@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>POS設備管理系統 v3.4.4 — Taipei 101</title>
+<title>POS設備管理系統 v3.4.5 — Taipei 101</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -527,7 +527,7 @@ textarea.pos-control { resize: vertical; font-family: var(--font); }
       <div class="dot" id="fb-dot"></div>
       <span id="fb-status-txt">Firebase 未連線</span>
     </div>
-    <div style="margin-top:6px;font-size:10px;color:#666;">v3.4.4 · 模擬系統</div>
+    <div style="margin-top:6px;font-size:10px;color:#666;">v3.4.5 · 模擬系統</div>
   </div>
 </nav>
 
@@ -2132,9 +2132,22 @@ function setFBStatus(ok, err) {
 async function getData(type) {
   if (useFirebase && db) {
     try {
-      const snap = await getDocs(query(collection(db, COLLECTIONS[type]), orderBy('createdAt', 'desc')));
-      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch { return lsGet(LOCAL_KEYS[type]); }
+      // 不用 orderBy 查詢：orderBy 會自動排除缺少該欄位的文件
+      // （例如直接在 Firebase Console 手動新增、未經表單產生 createdAt 的資料）
+      const snap = await getDocs(collection(db, COLLECTIONS[type]));
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // 改為前端排序：有 createdAt 的依時間新到舊；沒有的排最後
+      list.sort((a, b) => {
+        const ta = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+        const tb = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        return tb - ta;
+      });
+      return list;
+    } catch (e) {
+      console.error(`getData(${type}) Firestore 讀取失敗，改用 LocalStorage：`, e.code, e.message);
+      showToast(`⚠️ 讀取 ${type} 資料失敗，暫用本機備援資料`, 'error');
+      return lsGet(LOCAL_KEYS[type]);
+    }
   }
   return lsGet(LOCAL_KEYS[type]);
 }
