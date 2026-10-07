@@ -16,6 +16,20 @@ button:hover{border-color:var(--mu)}
 input,select{background:var(--pn);border:1px solid var(--ln);border-radius:4px;padding:4px 8px;min-width:0}
 [hidden]{display:none!important}
 .mu{color:var(--mu)}
+#tw{position:fixed;left:0;top:0;bottom:0;width:var(--tww);display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
+#tw .tm{position:relative;height:min(100vh,calc(var(--tww)*3.012));aspect-ratio:340/1024}
+#tw img{position:absolute;inset:0;width:100%;height:100%;opacity:.4}
+#fl{position:absolute;inset:0}
+.fb{position:absolute;left:68%;transform:translateY(-50%);display:flex;gap:5px;align-items:center;pointer-events:auto;padding:1px 8px 1px 6px;border-radius:10px;font-size:11px;line-height:16px;white-space:nowrap;background:color-mix(in srgb,var(--pn) 88%,transparent)}
+.fb i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.fb.on{border-color:var(--mnt);box-shadow:0 0 0 2px var(--mnt);font-weight:700}
+.fb.bad{animation:pl 1.2s infinite}
+@keyframes pl{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--bad) 35%,transparent)}}
+@media(prefers-reduced-motion:reduce){.fb.bad{animation:none}}
+#rp{margin-left:var(--tww);min-width:0}
+:root{--tww:clamp(150px,19vw,270px)}
+@media(prefers-color-scheme:dark){#tw img{opacity:.55}}
+@media(max-width:860px){#tw{display:none}#rp{margin-left:0}}
 #login{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg)}
 #lf{background:var(--pn);border:1px solid var(--ln);border-radius:6px;padding:28px;width:min(340px,92vw);display:grid;gap:12px}
 #lf h1{margin:0;font-size:20px}
@@ -62,11 +76,14 @@ td small{display:block;color:var(--mu);font-size:11px}
 <body>
 <div id="login"><form id="lf"><h1>POS 網路監控</h1><input id="pw" type="password" placeholder="共用密碼" autocomplete="current-password" required><button>登入</button><p id="le"></p></form></div>
 <div id="app" hidden>
+<aside id="tw"><div class="tm"><img src="tower.png" alt="" aria-hidden="true"><div id="fl"></div></div></aside>
+<div id="rp">
 <header><b>POS 網路監控</b>
 <nav id="tabs"><button data-t="mon">監控</button><button data-t="mng">對照表管理</button><button data-t="evt">事件紀錄</button></nav>
 <button id="who" title="修改操作者姓名"></button><button id="out">登出</button></header>
 <div id="bn" class="ok"></div>
 <main id="view"></main>
+</div>
 </div>
 <div id="toast"></div>
 <script type="module">
@@ -78,7 +95,7 @@ const LOGIN_EMAIL="pos-monitor@tfc101.com.tw"; // ← 改成您在 Firebase Auth
 const app=initializeApp({apiKey:"AIzaSyDBrpA1VLMZqMthHLpPBoKvZ8Z1sn3C-XA",authDomain:"pos-network-monitor.firebaseapp.com",projectId:"pos-network-monitor",storageBucket:"pos-network-monitor.firebasestorage.app",messagingSenderId:"244967293417",appId:"1:244967293417:web:8607f0cee5de4b18754b78"});
 const auth=getAuth(app),db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
 const $=s=>document.querySelector(s),view=$("#view");
-const S={nodes:{},map:{},hb:null,tab:"mon",sel:null,q:"",bad:false,showV:false,evs:null};
+const S={nodes:{},map:{},hb:null,tab:"mon",sel:null,floor:null,q:"",bad:false,showV:false,evs:null};
 const LBL={ok:"正常",bad:"異常",late:"逾時未恢復",exp:"預期離線",mnt:"維護中",unk:"未知"};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const nat=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true});
@@ -114,15 +131,30 @@ function pstat(nid,k,p,m){
 function banner(){const b=$("#bn"),age=S.hb?(Date.now()-new Date(S.hb.ts))/6e4:Infinity;
  if(age>10){b.className="";b.textContent=S.hb?`收信程式已 ${ago(S.hb.ts)}沒有回報，以下燈號可能已過時。`:"尚未收到收信程式的心跳。"}else b.className="ok"}
 
+/* ---------- 台北101 樓層標示 ---------- */
+const FL=[["89","89F",20.5],["88","88F",23.5],["86","86F",26.5],["85","85F",29.5],["35","35F",63],["LOW","B1–5F",89]];
+const fgroup=f=>{const c=String(f||"").toUpperCase().replace(/[\s樓F]/g,"");
+ if(["89","88","86","85","35"].includes(c))return c;return/^(B[1-9]|[1-5])$/.test(c)?"LOW":null};
+const flabel=k=>(FL.find(x=>x[0]===k)||[0,k])[1];
+function renderTower(){
+ const st={};
+ for(const[nid,n]of Object.entries(S.nodes)){const g=fgroup((S.map[nid]?.meta||{}).floor);if(!g)continue;
+  const o=st[g]||(st[g]={nodes:0,bad:0}),mp=S.map[nid]?.ports||{};o.nodes++;
+  for(const[k,p]of Object.entries(n.ports)){const x=p.kind==="interface"?pstat(nid,k,p,mp[k]||{}):(p.status==="up"?"ok":"bad");if(x==="bad"||x==="late")o.bad++}}
+ $("#fl").innerHTML=FL.map(([k,l,y])=>{const o=st[k],c=!o?"unk":o.bad?"bad":"ok";
+  return`<button class="fb ${c} ${S.floor===k?"on":""}" style="top:${y}%" data-k="${k}" title="${o?o.nodes+" 台 Switch，"+o.bad+" 項異常":"尚未指定此樓層的 Switch"}"><i></i>${l}${o&&o.bad?` <b>${o.bad}</b>`:""}</button>`}).join("")}
+$("#fl").addEventListener("click",e=>{const b=e.target.closest(".fb");if(!b)return;
+ S.floor=S.floor===b.dataset.k?null:b.dataset.k;if(S.tab!=="mon")setTab("mon");else render()});
+
 /* ---------- 監控頁 ---------- */
 function monSkeleton(){view.innerHTML=`<div class="bar"><div class="sum" id="sum"></div>
 <input id="q" type="search" placeholder="搜尋店櫃、POS 機號、Port、IDF" size="28" value="${esc(S.q)}">
-<label><input id="ob" type="checkbox" ${S.bad?"checked":""}> 只看非正常項目</label></div><div id="grid"></div>`;
- $("#q").oninput=e=>{S.q=e.target.value;renderMon()};$("#ob").onchange=e=>{S.bad=e.target.checked;renderMon()}}
+<label><input id="ob" type="checkbox" ${S.bad?"checked":""}> 只看非正常項目</label><button id="cf" hidden></button><span class="mu" id="un"></span></div><div id="grid"></div>`;
+ $("#q").oninput=e=>{S.q=e.target.value;renderMon()};$("#ob").onchange=e=>{S.bad=e.target.checked;renderMon()};$("#cf").onclick=()=>{S.floor=null;render()}}
 function renderMon(){
- const q=S.q.trim().toLowerCase(),cnt={bad:0,late:0,exp:0,mnt:0,unk:0,ok:0},cards=[];
+ const q=S.q.trim().toLowerCase(),cnt={bad:0,late:0,exp:0,mnt:0,unk:0,ok:0},cards=[];let unas=0;
  for(const[nid,n]of Object.entries(S.nodes)){
-  const mp=S.map[nid]||{},meta=mp.meta||{},tiles=[],chips=[];let nbad=0,show=false;
+  const mp=S.map[nid]||{},meta=mp.meta||{},tiles=[],chips=[];let nbad=0,show=false;const g=fgroup(meta.floor);if(!g)unas++;if(S.floor&&g!==S.floor)continue;
   const ports=Object.entries(n.ports).map(([k,p])=>[k,p,(mp.ports||{})[k]||{}]).sort((a,b)=>nat(a[2].port_no||a[1].port_no||a[0],b[2].port_no||b[1].port_no||b[0]));
   for(const[k,p,m]of ports){
    if(p.kind!=="interface"){const st=p.status==="up"?"ok":"bad";cnt[st]++;if(st==="bad")nbad++;
@@ -138,6 +170,7 @@ function renderMon(){
   cards.push([nbad,`<section class="nc ${nbad?"alert":""}"><h3>${esc(nid)}<small>${esc(n.ip)}　${esc([meta.floor,meta.idf].filter(Boolean).join(" / "))}</small><span>最後來信 ${ago(n.last_snapshot_time)}前</span></h3>${chips.length?`<div class="ch">${chips.join("")}</div>`:""}<div class="tg">${tiles.map(t=>t[1]).join("")}</div></section>`]);
  }
  cards.sort((a,b)=>b[0]-a[0]);
+ $("#cf").hidden=!S.floor;$("#cf").textContent=S.floor?`樓層：${flabel(S.floor)} ✕`:"";$("#un").textContent=unas?`有 ${unas} 台 Switch 尚未指定樓層（請到「對照表管理」填寫）`:"";
  $("#sum").innerHTML=["bad","late","exp","mnt","unk","ok"].map(k=>`<span class="${k}"><strong>${cnt[k]}</strong>${LBL[k]}</span>`).join("");
  $("#grid").innerHTML=cards.map(c=>c[1]).join("")||`<p class="mu">${Object.keys(S.nodes).length?"沒有符合條件的項目。":"尚無資料，等待收信程式寫入第一封警告信。"}</p>`;
 }
@@ -151,7 +184,7 @@ function renderMng(){
  const un=id=>Object.values(S.map[id].ports||{}).filter(x=>x.type!=="virtual"&&!x.store).length;
  const rows=Object.entries(mp.ports||{}).filter(([,p])=>S.showV||p.type!=="virtual").sort((a,b)=>nat(a[1].port_no||a[0],b[1].port_no||b[0]));
  view.innerHTML=`<div class="bar"><select id="ns">${ids.map(i=>`<option value="${esc(i)}" ${i===S.sel?"selected":""}>${esc(i)}（未登錄 ${un(i)}）</option>`).join("")}</select>
- <label>樓層 <input data-f="floor" type="text" size="8" value="${esc(meta.floor)}"></label>
+ <label>樓層 <input data-f="floor" type="text" size="8" list="flo" value="${esc(meta.floor)}"><datalist id="flo">${["B1F","1F","2F","3F","4F","5F","35F","85F","86F","88F","89F"].map(x=>`<option value="${x}">`).join("")}</datalist></label>
  <label>IDF <input data-f="idf" type="text" size="14" value="${esc(meta.idf)}"></label>
  <label><input id="sv" type="checkbox" ${S.showV?"checked":""}> 顯示虛擬項目</label>
  <span class="mu">修改後離開欄位即自動儲存。「套用離線時段」勾選的 port，在預設時段內斷線不會警報。</span></div>
@@ -194,7 +227,7 @@ function setTab(t){S.tab=t;document.querySelectorAll("#tabs button").forEach(b=>
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.t));
 let raf=0;
 function render(){cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{
- banner();
+ banner();renderTower();
  if(S.tab==="mon"&&$("#grid"))renderMon();
  else if(S.tab==="mng"&&!view.contains(document.activeElement))renderMng()})}
 </script>
