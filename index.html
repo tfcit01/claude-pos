@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>POS 網路監控</title>
+<style>
+:root{--bg:#e9edf0;--pn:#f8fafb;--ink:#16222c;--mu:#5d6b78;--ln:#cdd5dc;--ok:#1f8a5b;--bad:#d12f2f;--late:#b4540a;--exp:#7d8a97;--mnt:#2f62c9;--unk:#aab3bc}
+@media(prefers-color-scheme:dark){:root{--bg:#10161c;--pn:#18212a;--ink:#e4eaf0;--mu:#93a1ae;--ln:#2a3641;--ok:#38b57f;--bad:#f06060;--late:#e8913f;--exp:#7d8a97;--mnt:#6e98f0;--unk:#53606c}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}
+button,input,select{font:inherit;color:inherit}
+button{background:var(--pn);border:1px solid var(--ln);border-radius:4px;padding:5px 12px;cursor:pointer}
+button:hover{border-color:var(--mu)}
+:focus-visible{outline:2px solid var(--mnt);outline-offset:1px}
+input,select{background:var(--pn);border:1px solid var(--ln);border-radius:4px;padding:4px 8px;min-width:0}
+[hidden]{display:none!important}
+.mu{color:var(--mu)}
+#login{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg)}
+#lf{background:var(--pn);border:1px solid var(--ln);border-radius:6px;padding:28px;width:min(340px,92vw);display:grid;gap:12px}
+#lf h1{margin:0;font-size:20px}
+#le{margin:0;color:var(--bad);min-height:1.4em}
+header{position:sticky;top:0;z-index:5;display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:8px 16px;background:var(--pn);border-bottom:1px solid var(--ln)}
+header b{font-size:16px}
+#tabs{display:flex;gap:2px;flex:1}
+#tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px}
+#tabs button.on{border-color:var(--mnt);font-weight:700}
+#bn{padding:9px 16px;background:var(--bad);color:#fff;font-weight:700}
+#bn.ok{display:none}
+main{padding:16px;max-width:1500px;margin:auto}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.sum{display:flex;gap:8px;flex-wrap:wrap}
+.sum span{display:flex;gap:6px;align-items:baseline;padding:4px 12px;border-left:5px solid var(--c);background:var(--pn);border-radius:3px}
+.sum strong{font-size:22px;font-variant-numeric:tabular-nums}
+.bad{--c:var(--bad)}.late{--c:var(--late)}.ok{--c:var(--ok)}.exp{--c:var(--exp)}.mnt{--c:var(--mnt)}.unk{--c:var(--unk)}
+.nc{background:var(--pn);border:1px solid var(--ln);border-radius:6px;margin-bottom:12px;padding:12px}
+.nc.alert{border-color:var(--bad);box-shadow:inset 0 3px 0 var(--bad)}
+.nc h3{margin:0 0 8px;font-size:15px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.nc h3 small{font-weight:400;color:var(--mu)}
+.nc h3 span{margin-left:auto;font-weight:400;color:var(--mu);font-size:12px}
+.ch{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.ch i{font-style:normal;font-size:12px;padding:1px 8px;border:1px solid var(--c);border-radius:10px}
+.tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:6px}
+.t{border-left:6px solid var(--c);background:var(--bg);border-radius:3px;padding:5px 8px;min-width:0}
+.t b,.t small,.t em{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t small{color:var(--mu);font-size:12px}
+.t em{font-style:normal;font-size:12px;font-weight:700;color:var(--c)}
+.t.bad,.t.late{background:color-mix(in srgb,var(--c) 14%,var(--pn))}
+.t.ok{opacity:.82}
+table{width:100%;border-collapse:collapse;background:var(--pn)}
+th,td{border-bottom:1px solid var(--ln);padding:5px 8px;text-align:left;vertical-align:middle}
+th{font-weight:700;background:var(--bg);position:sticky;top:44px}
+td input[type=text]{width:100%}
+td small{display:block;color:var(--mu);font-size:11px}
+.d{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--c)}
+.tw{overflow-x:auto;border:1px solid var(--ln);border-radius:6px}
+.sv{padding:1px 8px;border-radius:3px;color:#fff;background:var(--c);font-size:12px;white-space:nowrap}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:4px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div id="login"><form id="lf"><h1>POS 網路監控</h1><input id="pw" type="password" placeholder="共用密碼" autocomplete="current-password" required><button>登入</button><p id="le"></p></form></div>
+<div id="app" hidden>
+<header><b>POS 網路監控</b>
+<nav id="tabs"><button data-t="mon">監控</button><button data-t="mng">對照表管理</button><button data-t="evt">事件紀錄</button></nav>
+<button id="who" title="修改操作者姓名"></button><button id="out">登出</button></header>
+<div id="bn" class="ok"></div>
+<main id="view"></main>
+</div>
+<div id="toast"></div>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,onSnapshot,updateDoc,query,orderBy,limit,getDocs} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const LOGIN_EMAIL="pos-monitor@tfc101.com.tw"; // ← 改成您在 Firebase Authentication 建立的共用帳號
+const app=initializeApp({apiKey:"AIzaSyDBrpA1VLMZqMthHLpPBoKvZ8Z1sn3C-XA",authDomain:"pos-network-monitor.firebaseapp.com",projectId:"pos-network-monitor",storageBucket:"pos-network-monitor.firebasestorage.app",messagingSenderId:"244967293417",appId:"1:244967293417:web:8607f0cee5de4b18754b78"});
+const auth=getAuth(app),db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
+const $=s=>document.querySelector(s),view=$("#view");
+const S={nodes:{},map:{},hb:null,tab:"mon",sel:null,q:"",bad:false,showV:false,evs:null};
+const LBL={ok:"正常",bad:"異常",late:"逾時未恢復",exp:"預期離線",mnt:"維護中",unk:"未知"};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nat=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true});
+function ago(iso){if(!iso)return"-";const m=Math.max(0,Math.round((Date.now()-new Date(iso))/6e4));
+ return m<60?m+" 分":m<1440?Math.floor(m/60)+" 小時 "+m%60+" 分":Math.floor(m/1440)+" 天 "+Math.floor(m%1440/60)+" 小時"}
+function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");setTimeout(()=>e.classList.remove("on"),2600)}
+
+/* ---------- 登入 ---------- */
+$("#lf").onsubmit=async e=>{e.preventDefault();$("#le").textContent="";
+ try{await signInWithEmailAndPassword(auth,LOGIN_EMAIL,$("#pw").value)}catch{$("#le").textContent="密碼錯誤，或帳號設定有誤。"}};
+$("#out").onclick=()=>signOut(auth);
+let unsubs=[];
+onAuthStateChanged(auth,u=>{
+ $("#login").hidden=!!u;$("#app").hidden=!u;unsubs.forEach(f=>f());unsubs=[];
+ if(!u)return;
+ const lis=(ref,fn)=>unsubs.push(onSnapshot(ref,fn,e=>toast("讀取失敗："+e.code)));
+ lis(collection(db,"nodes"),s=>{S.nodes={};s.forEach(d=>S.nodes[d.id]=d.data());render()});
+ lis(collection(db,"mapping"),s=>{S.map={};s.forEach(d=>S.map[d.id]=d.data());render()});
+ lis(doc(db,"system","heartbeat"),d=>{S.hb=d.exists()?d.data():null;render()});
+ setTab(S.tab);
+});
+setInterval(()=>{if(!$("#app").hidden)render()},30000);
+
+/* ---------- 狀態判斷 ---------- */
+function pstat(nid,k,p,m){
+ if(m.type==="virtual")return null;
+ if(p.status==="up")return"ok";
+ const n=S.nodes[nid];
+ if(n.node_state==="down"||Object.values(n.ports).some(x=>x.kind==="ping"&&x.status==="down"))return"unk";
+ if(m.maintenance)return"mnt";
+ return{alarm:"bad",overdue:"late",expected:"exp",maintenance:"mnt"}[p.alert]||"bad";
+}
+function banner(){const b=$("#bn"),age=S.hb?(Date.now()-new Date(S.hb.ts))/6e4:Infinity;
+ if(age>10){b.className="";b.textContent=S.hb?`收信程式已 ${ago(S.hb.ts)}沒有回報，以下燈號可能已過時。`:"尚未收到收信程式的心跳。"}else b.className="ok"}
+
+/* ---------- 監控頁 ---------- */
+function monSkeleton(){view.innerHTML=`<div class="bar"><div class="sum" id="sum"></div>
+<input id="q" type="search" placeholder="搜尋店櫃、POS 機號、Port、IDF" size="28" value="${esc(S.q)}">
+<label><input id="ob" type="checkbox" ${S.bad?"checked":""}> 只看非正常項目</label></div><div id="grid"></div>`;
+ $("#q").oninput=e=>{S.q=e.target.value;renderMon()};$("#ob").onchange=e=>{S.bad=e.target.checked;renderMon()}}
+function renderMon(){
+ const q=S.q.trim().toLowerCase(),cnt={bad:0,late:0,exp:0,mnt:0,unk:0,ok:0},cards=[];
+ for(const[nid,n]of Object.entries(S.nodes)){
+  const mp=S.map[nid]||{},meta=mp.meta||{},tiles=[],chips=[];let nbad=0,show=false;
+  const ports=Object.entries(n.ports).map(([k,p])=>[k,p,(mp.ports||{})[k]||{}]).sort((a,b)=>nat(a[2].port_no||a[1].port_no||a[0],b[2].port_no||b[1].port_no||b[0]));
+  for(const[k,p,m]of ports){
+   if(p.kind!=="interface"){const st=p.status==="up"?"ok":"bad";cnt[st]++;if(st==="bad")nbad++;
+    chips.push(`<i class="${st}">${esc(p.description)} ${st==="ok"?"":"異常"}</i>`);continue}
+   const st=pstat(nid,k,p,m);if(!st)continue;cnt[st]++;if(st==="bad"||st==="late")nbad++;
+   const hay=[nid,meta.idf,meta.floor,m.store,m.pos_no,m.port_no,p.port_no,p.description].join(" ").toLowerCase();
+   if(q&&!hay.includes(q))continue;if(S.bad&&st==="ok")continue;show=true;
+   const sub=[m.pos_no?"POS "+m.pos_no:"",m.port_no||p.port_no].filter(Boolean).join("　");
+   tiles.push([st,`<div class="t ${st}" title="${esc(p.description+"\nifIndex "+k)}"><b>${esc(m.store||p.description)}</b><small>${esc(sub||"ifIndex "+k)}</small>${st==="ok"?"":`<em>${LBL[st]}　${ago(p.status_since)}</em>`}</div>`]);
+  }
+  if(!show&&(q||S.bad))continue;
+  tiles.sort((a,b)=>(a[0]==="ok")-(b[0]==="ok"));
+  cards.push([nbad,`<section class="nc ${nbad?"alert":""}"><h3>${esc(nid)}<small>${esc(n.ip)}　${esc([meta.floor,meta.idf].filter(Boolean).join(" / "))}</small><span>最後來信 ${ago(n.last_snapshot_time)}前</span></h3>${chips.length?`<div class="ch">${chips.join("")}</div>`:""}<div class="tg">${tiles.map(t=>t[1]).join("")}</div></section>`]);
+ }
+ cards.sort((a,b)=>b[0]-a[0]);
+ $("#sum").innerHTML=["bad","late","exp","mnt","unk","ok"].map(k=>`<span class="${k}"><strong>${cnt[k]}</strong>${LBL[k]}</span>`).join("");
+ $("#grid").innerHTML=cards.map(c=>c[1]).join("")||`<p class="mu">${Object.keys(S.nodes).length?"沒有符合條件的項目。":"尚無資料，等待收信程式寫入第一封警告信。"}</p>`;
+}
+
+/* ---------- 對照表管理 ---------- */
+const TYPES={pos:"POS",tenant_link:"專櫃線路",uplink:"上行",lag:"聚合",other:"其他",virtual:"虛擬（忽略）"};
+function renderMng(){
+ const ids=Object.keys(S.map).sort(nat);if(!S.sel||!S.map[S.sel])S.sel=ids[0];
+ if(!S.sel){view.innerHTML='<p class="mu">尚無對照表。收信程式收到第一封信後會自動建立。</p>';return}
+ const mp=S.map[S.sel],meta=mp.meta||{},n=S.nodes[S.sel];
+ const un=id=>Object.values(S.map[id].ports||{}).filter(x=>x.type!=="virtual"&&!x.store).length;
+ const rows=Object.entries(mp.ports||{}).filter(([,p])=>S.showV||p.type!=="virtual").sort((a,b)=>nat(a[1].port_no||a[0],b[1].port_no||b[0]));
+ view.innerHTML=`<div class="bar"><select id="ns">${ids.map(i=>`<option value="${esc(i)}" ${i===S.sel?"selected":""}>${esc(i)}（未登錄 ${un(i)}）</option>`).join("")}</select>
+ <label>樓層 <input data-f="floor" type="text" size="8" value="${esc(meta.floor)}"></label>
+ <label>IDF <input data-f="idf" type="text" size="14" value="${esc(meta.idf)}"></label>
+ <label><input id="sv" type="checkbox" ${S.showV?"checked":""}> 顯示虛擬項目</label>
+ <span class="mu">修改後離開欄位即自動儲存。「套用離線時段」勾選的 port，在預設時段內斷線不會警報。</span></div>
+ <div class="tw"><table><thead><tr><th></th><th>WhatsUp 描述</th><th>店櫃名稱</th><th>POS 機號</th><th>Port No</th><th>類型</th><th>套用離線時段</th><th>維護中</th></tr></thead><tbody>
+ ${rows.map(([k,p])=>{const st=n&&n.ports[k]?(n.ports[k].status==="up"?"ok":"bad"):"unk";
+ return`<tr><td><i class="d ${st}"></i></td><td>${esc(p.description)}<small>ifIndex ${esc(k)}</small></td>
+ <td><input type="text" data-k="${esc(k)}" data-f="store" value="${esc(p.store)}"></td>
+ <td><input type="text" data-k="${esc(k)}" data-f="pos_no" value="${esc(p.pos_no)}" size="8"></td>
+ <td><input type="text" data-k="${esc(k)}" data-f="port_no" value="${esc(p.port_no)}" size="8"></td>
+ <td><select data-k="${esc(k)}" data-f="type">${Object.entries(TYPES).map(([v,l])=>`<option value="${v}" ${p.type===v?"selected":""}>${l}</option>`).join("")}</select></td>
+ <td><input type="checkbox" data-k="${esc(k)}" data-f="use_window" ${p.use_window?"checked":""}></td>
+ <td><input type="checkbox" data-k="${esc(k)}" data-f="maintenance" ${p.maintenance?"checked":""}></td></tr>`}).join("")}
+ </tbody></table></div>`;
+ $("#ns").onchange=e=>{S.sel=e.target.value;renderMng()};$("#sv").onchange=e=>{S.showV=e.target.checked;renderMng()};
+}
+const who=()=>localStorage.getItem("op")||"";
+function setWho(force){let n=who();if(force||!n){n=(prompt("請輸入操作者姓名（用於記錄誰修改了對照表）",n)||"").trim();if(n)localStorage.setItem("op",n)}$("#who").textContent=who()||"設定姓名";return who()}
+$("#who").onclick=()=>setWho(true);
+view.addEventListener("change",async e=>{
+ const t=e.target,f=t.dataset.f;if(!f||S.tab!=="mng")return;
+ if(!setWho(false)){toast("請先輸入操作者姓名才能儲存");renderMng();return}
+ const v=t.type==="checkbox"?t.checked:t.value.trim(),k=t.dataset.k,base=k?`ports.${k}`:"meta";
+ try{await updateDoc(doc(db,"mapping",S.sel),{[`${base}.${f}`]:v,[`${base}.updated_by`]:who(),[`${base}.updated_at`]:new Date().toISOString()});toast("已儲存")}
+ catch(err){toast("儲存失敗："+err.code)}
+});
+
+/* ---------- 事件紀錄 ---------- */
+async function loadEvents(){view.innerHTML='<p class="mu">讀取中…</p>';
+ try{const s=await getDocs(query(collection(db,"events"),orderBy("time","desc"),limit(100)));S.evs=s.docs.map(d=>d.data())}catch(e){S.evs=null;toast("讀取失敗："+e.code)}renderEvt()}
+const SEV={alarm:["bad","異常"],overdue:["late","逾時未恢復"],expected:["exp","預期離線"],maintenance:["mnt","維護中"],recovery:["ok","恢復"]};
+function renderEvt(){
+ view.innerHTML=`<div class="bar"><button id="rf">重新整理</button><span class="mu">最近 100 筆</span></div><div class="tw"><table><thead><tr><th>時間</th><th>狀態</th><th>Switch</th><th>店櫃</th><th>POS</th><th>Port</th><th>描述</th></tr></thead><tbody>
+ ${(S.evs||[]).map(e=>{const[c,l]=SEV[e.severity]||["unk",e.severity];return`<tr><td>${esc(e.time.slice(5,16).replace("T"," "))}</td><td><span class="sv ${c}">${l}</span></td><td>${esc(e.node)}</td><td>${esc(e.store)}</td><td>${esc(e.pos_no)}</td><td>${esc(e.port_no)}</td><td>${esc(e.description)}</td></tr>`}).join("")||'<tr><td colspan="7" class="mu">目前沒有事件。</td></tr>'}</tbody></table></div>`;
+ $("#rf").onclick=loadEvents}
+
+/* ---------- 分頁與渲染 ---------- */
+function setTab(t){S.tab=t;document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
+ $("#who").textContent=who()||"設定姓名";
+ if(t==="mon"){monSkeleton();render()}else if(t==="mng")renderMng();else loadEvents()}
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.t));
+let raf=0;
+function render(){cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{
+ banner();
+ if(S.tab==="mon"&&$("#grid"))renderMon();
+ else if(S.tab==="mng"&&!view.contains(document.activeElement))renderMng()})}
+</script>
+</body>
+</html>
