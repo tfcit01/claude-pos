@@ -47,6 +47,27 @@ main{padding:16px;max-width:1500px;margin:auto}
 .sum span{display:flex;gap:6px;align-items:baseline;padding:4px 12px;border-left:5px solid var(--c);background:var(--pn);border-radius:3px}
 .sum strong{font-size:22px;font-variant-numeric:tabular-nums}
 .bad{--c:var(--bad)}.late{--c:var(--late)}.ok{--c:var(--ok)}.exp{--c:var(--exp)}.mnt{--c:var(--mnt)}.unk{--c:var(--unk)}
+#grid.ov{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,580px),1fr));gap:12px}
+.dv{display:block;width:100%;text-align:left;padding:8px 10px 10px;background:var(--pn);border:1px solid var(--ln);border-radius:6px;overflow-x:auto}
+button.dv:hover{border-color:var(--mnt)}
+.dv.alert{border-color:var(--bad);box-shadow:inset 0 3px 0 var(--bad)}
+.dn{display:flex;justify-content:space-between;font-weight:700;margin-bottom:6px}
+.dn em{font-style:normal;color:var(--bad)}
+.fp{display:flex;gap:6px;align-items:center;width:max-content;margin-bottom:5px;background:#2a3038;border:1px solid #10151a;border-radius:4px;padding:7px 10px;box-shadow:inset 0 1px 0 #ffffff14}
+.pn{display:grid;gap:3px}
+.rw{display:flex;gap:2px}
+.up{display:grid;grid-template-rows:repeat(2,auto);grid-auto-flow:column;gap:3px 2px;margin-left:10px;padding-left:10px;border-left:1px solid #ffffff1f}
+.un{font:700 10px ui-monospace,Consolas,monospace;color:#9aa6b2;padding-right:4px}
+.j{width:19px;height:25px;background:#12161b;border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:2px 0 4px}
+.j.g{margin-left:7px}
+.j s{text-decoration:none;font:9px/1 ui-monospace,Consolas,monospace;color:#9aa6b2}
+.j i{width:8px;height:8px;border-radius:50%;background:#252c33}
+.j.ok i{background:#34d27b}.j.bad i{background:#ff4d4d;box-shadow:0 0 7px #ff4d4d;animation:bl 1.1s infinite}.j.late i{background:#ff9a3c;box-shadow:0 0 6px #ff9a3c}
+.j.exp i{background:#8d9aa8}.j.mnt i{background:#5b8cff}.j.unk i{background:#59636d}
+.j.hit{outline:2px solid #ffd54a}
+.fp.ex .j{width:auto;min-width:19px;padding:2px 3px 4px}
+@keyframes bl{50%{opacity:.35}}
+@media(prefers-reduced-motion:reduce){.j.bad i{animation:none}}
 .nc{background:var(--pn);border:1px solid var(--ln);border-radius:6px;margin-bottom:12px;padding:12px}
 .nc.alert{border-color:var(--bad);box-shadow:inset 0 3px 0 var(--bad)}
 .nc h3{margin:0 0 8px;font-size:15px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
@@ -95,7 +116,7 @@ const LOGIN_EMAIL="pos-monitor@tfc101.com.tw"; // ← 改成您在 Firebase Auth
 const app=initializeApp({apiKey:"AIzaSyDBrpA1VLMZqMthHLpPBoKvZ8Z1sn3C-XA",authDomain:"pos-network-monitor.firebaseapp.com",projectId:"pos-network-monitor",storageBucket:"pos-network-monitor.firebasestorage.app",messagingSenderId:"244967293417",appId:"1:244967293417:web:8607f0cee5de4b18754b78"});
 const auth=getAuth(app),db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
 const $=s=>document.querySelector(s),view=$("#view");
-const S={nodes:{},map:{},hb:null,tab:"mon",sel:null,floor:null,q:"",bad:false,showV:false,evs:null};
+const S={nodes:{},map:{},hb:null,tab:"mon",sel:null,dev:null,floor:null,q:"",bad:false,showV:false,evs:null};
 const LBL={ok:"正常",bad:"異常",late:"逾時未恢復",exp:"預期離線",mnt:"維護中",unk:"未知"};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const nat=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true});
@@ -144,36 +165,66 @@ function renderTower(){
  $("#fl").innerHTML=FL.map(([k,l,y])=>{const o=st[k],c=!o?"unk":o.bad?"bad":"ok";
   return`<button class="fb ${c} ${S.floor===k?"on":""}" style="top:${y}%" data-k="${k}" title="${o?o.nodes+" 台 Switch，"+o.bad+" 項異常":"尚未指定此樓層的 Switch"}"><i></i>${l}${o&&o.bad?` <b>${o.bad}</b>`:""}</button>`}).join("")}
 $("#fl").addEventListener("click",e=>{const b=e.target.closest(".fb");if(!b)return;
- S.floor=S.floor===b.dataset.k?null:b.dataset.k;if(S.tab!=="mon")setTab("mon");else render()});
+ S.dev=null;S.floor=S.floor===b.dataset.k?null:b.dataset.k;if(S.tab!=="mon")setTab("mon");else render()});
 
 /* ---------- 監控頁 ---------- */
 function monSkeleton(){view.innerHTML=`<div class="bar"><div class="sum" id="sum"></div>
 <input id="q" type="search" placeholder="搜尋店櫃、POS 機號、Port、IDF" size="28" value="${esc(S.q)}">
 <label><input id="ob" type="checkbox" ${S.bad?"checked":""}> 只看非正常項目</label><button id="cf" hidden></button><span class="mu" id="un"></span></div><div id="grid"></div>`;
- $("#q").oninput=e=>{S.q=e.target.value;renderMon()};$("#ob").onchange=e=>{S.bad=e.target.checked;renderMon()};$("#cf").onclick=()=>{S.floor=null;render()}}
+ $("#q").oninput=e=>{S.q=e.target.value;renderMon()};$("#ob").onchange=e=>{S.bad=e.target.checked;renderMon()};$("#cf").onclick=()=>{S.floor=null;render()};$("#grid").onclick=e=>{const d=e.target.closest("[data-dev]");if(d){S.dev=d.dataset.dev;render();scrollTo(0,0)}else if(e.target.closest("#bk")){S.dev=null;render()}}}
+function place(p,m){ // 回傳 [堆疊成員, 插槽, 埠號]；無法判斷回傳 null
+ const pn=m.port_no||p.port_no||"";let x;
+ if(x=pn.match(/^(\d+)\/(\d+)\/(\d+)$/))return[+x[1],+x[2],+x[3]];
+ if(x=pn.match(/^(\d+)\/(\d+)$/))return[1,+x[1],+x[2]];
+ const i=p.if_index;if(i>10000&&i<10700)return[Math.max(1,Math.floor((i-10000)/100)),0,i%100];
+ return null}
+function nodeInfo(nid,n){
+ const mp=S.map[nid]||{},meta=mp.meta||{},ports=[],chips=[];let bad=0,non=0,hb=0,ho=0;
+ for(const[k,p]of Object.entries(n.ports)){
+  if(p.kind!=="interface"){const ok=p.status==="up";ok?ho++:hb++;chips.push(`<i class="${ok?"ok":"bad"}">${esc(p.description)}${ok?"":" 異常"}</i>`);continue}
+  const m=(mp.ports||{})[k]||{},st=pstat(nid,k,p,m);if(!st)continue;
+  if(st==="bad"||st==="late")bad++;if(st!=="ok")non++;
+  ports.push({k,p,m,st,hay:[nid,meta.idf,meta.floor,m.store,m.pos_no,m.port_no,p.port_no,p.description].join(" ").toLowerCase()})}
+ return{meta,ports,chips,bad,non,hb,ho}}
+const J=(num,st,h,g)=>`<b class="j ${st||"n"}${h?" hit":""}${g?" g":""}"><s>${num}</s><i></i></b>`;
+function faceplate(I,hit){
+ const U={},ex=[];
+ for(const{k,p,m,st}of I.ports){if(m.type==="lag")continue;const pl=place(p,m);
+  if(!pl){ex.push([k,st]);continue}
+  const u=U[pl[0]]||(U[pl[0]]={main:{},up:[]});
+  if(pl[1]===0&&pl[2]<=48)u.main[pl[2]]=[st,hit.has(k)];else u.up.push([pl[2],st,hit.has(k)])}
+ const ids=Object.keys(U).sort(nat);
+ let h=ids.map(id=>{const u=U[id],N=Math.max(0,...Object.keys(u.main))>24?48:24;
+  const rows=[0,1].map(r=>`<div class="rw">${Array.from({length:N/2},(_,c)=>{const num=2*c+1+r,v=u.main[num]||[];return J(num,v[0],v[1],c&&c%6===0)}).join("")}</div>`).join("");
+  const up=u.up.sort((a,b)=>a[0]-b[0]).map(x=>J(x[0],x[1],x[2])).join("");
+  return`<div class="fp">${ids.length>1?`<span class="un">${id}</span>`:""}<div class="pn">${rows}</div>${up?`<div class="up">${up}</div>`:""}</div>`}).join("");
+ if(ex.length)h+=`<div class="fp ex">${ex.sort((a,b)=>a[0]-b[0]).map(([k,st])=>J(k,st)).join("")}</div>`;
+ return h||'<p class="mu">沒有可顯示的 Port</p>'}
+function tiles(I){
+ return I.ports.slice().sort((a,b)=>(a.st==="ok")-(b.st==="ok")||nat(a.m.port_no||a.p.port_no||a.k,b.m.port_no||b.p.port_no||b.k)).map(({k,p,m,st})=>{
+  const sub=[m.pos_no?"POS "+m.pos_no:"",m.port_no||p.port_no].filter(Boolean).join("　");
+  return`<div class="t ${st}" title="${esc(p.description+"\nifIndex "+k)}"><b>${esc(m.store||p.description)}</b><small>${esc(sub||"ifIndex "+k)}</small>${st==="ok"?"":`<em>${LBL[st]}　${ago(p.status_since)}</em>`}</div>`}).join("")}
 function renderMon(){
  const q=S.q.trim().toLowerCase(),cnt={bad:0,late:0,exp:0,mnt:0,unk:0,ok:0},cards=[];let unas=0;
+ if(S.dev&&!S.nodes[S.dev])S.dev=null;
+ $(".bar").hidden=!!S.dev;
  for(const[nid,n]of Object.entries(S.nodes)){
-  const mp=S.map[nid]||{},meta=mp.meta||{},tiles=[],chips=[];let nbad=0,show=false;const g=fgroup(meta.floor);if(!g)unas++;if(S.floor&&g!==S.floor)continue;
-  const ports=Object.entries(n.ports).map(([k,p])=>[k,p,(mp.ports||{})[k]||{}]).sort((a,b)=>nat(a[2].port_no||a[1].port_no||a[0],b[2].port_no||b[1].port_no||b[0]));
-  for(const[k,p,m]of ports){
-   if(p.kind!=="interface"){const st=p.status==="up"?"ok":"bad";cnt[st]++;if(st==="bad")nbad++;
-    chips.push(`<i class="${st}">${esc(p.description)} ${st==="ok"?"":"異常"}</i>`);continue}
-   const st=pstat(nid,k,p,m);if(!st)continue;cnt[st]++;if(st==="bad"||st==="late")nbad++;
-   const hay=[nid,meta.idf,meta.floor,m.store,m.pos_no,m.port_no,p.port_no,p.description].join(" ").toLowerCase();
-   if(q&&!hay.includes(q))continue;if(S.bad&&st==="ok")continue;show=true;
-   const sub=[m.pos_no?"POS "+m.pos_no:"",m.port_no||p.port_no].filter(Boolean).join("　");
-   tiles.push([st,`<div class="t ${st}" title="${esc(p.description+"\nifIndex "+k)}"><b>${esc(m.store||p.description)}</b><small>${esc(sub||"ifIndex "+k)}</small>${st==="ok"?"":`<em>${LBL[st]}　${ago(p.status_since)}</em>`}</div>`]);
-  }
-  if(!show&&(q||S.bad))continue;
-  tiles.sort((a,b)=>(a[0]==="ok")-(b[0]==="ok"));
-  cards.push([nbad,`<section class="nc ${nbad?"alert":""}"><h3>${esc(nid)}<small>${esc(n.ip)}　${esc([meta.floor,meta.idf].filter(Boolean).join(" / "))}</small><span>最後來信 ${ago(n.last_snapshot_time)}前</span></h3>${chips.length?`<div class="ch">${chips.join("")}</div>`:""}<div class="tg">${tiles.map(t=>t[1]).join("")}</div></section>`]);
- }
- cards.sort((a,b)=>b[0]-a[0]);
+  const I=nodeInfo(nid,n),g=fgroup(I.meta.floor);
+  if(!g)unas++;if(S.floor&&g!==S.floor)continue;
+  I.ports.forEach(x=>cnt[x.st]++);cnt.bad+=I.hb;cnt.ok+=I.ho;
+  if(S.dev)continue;
+  if(q&&!I.ports.some(x=>x.hay.includes(q))&&!`${nid} ${I.meta.floor} ${I.meta.idf}`.toLowerCase().includes(q))continue;
+  if(S.bad&&!(I.non+I.hb))continue;
+  const hit=new Set(q?I.ports.filter(x=>x.hay.includes(q)).map(x=>x.k):[]),al=I.bad+I.hb;
+  cards.push([al,`<button class="dv ${al?"alert":""}" data-dev="${esc(nid)}"><span class="dn">${esc(nid)}<em>${al||""}</em></span>${faceplate(I,hit)}</button>`])}
  $("#cf").hidden=!S.floor;$("#cf").textContent=S.floor?`樓層：${flabel(S.floor)} ✕`:"";$("#un").textContent=unas?`有 ${unas} 台 Switch 尚未指定樓層（請到「對照表管理」填寫）`:"";
  $("#sum").innerHTML=["bad","late","exp","mnt","unk","ok"].map(k=>`<span class="${k}"><strong>${cnt[k]}</strong>${LBL[k]}</span>`).join("");
- $("#grid").innerHTML=cards.map(c=>c[1]).join("")||`<p class="mu">${Object.keys(S.nodes).length?"沒有符合條件的項目。":"尚無資料，等待收信程式寫入第一封警告信。"}</p>`;
-}
+ const grid=$("#grid");
+ if(S.dev){const n=S.nodes[S.dev],I=nodeInfo(S.dev,n),al=I.bad+I.hb;grid.className="";
+  grid.innerHTML=`<div class="bar"><button id="bk">← 返回總覽</button><b>${esc(S.dev)}</b><span class="mu">${esc(n.ip)}　${esc([I.meta.floor,I.meta.idf].filter(Boolean).join(" / "))}　最後來信 ${ago(n.last_snapshot_time)}前</span></div>
+  <section class="nc ${al?"alert":""}"><div class="dv" style="border:0;padding:0;background:none">${faceplate(I,new Set())}</div>${I.chips.length?`<div class="ch">${I.chips.join("")}</div>`:""}<div class="tg">${tiles(I)}</div></section>`;return}
+ cards.sort((a,b)=>b[0]-a[0]);grid.className="ov";
+ grid.innerHTML=cards.map(c=>c[1]).join("")||`<p class="mu">${Object.keys(S.nodes).length?"沒有符合條件的設備。":"尚無資料，等待收信程式寫入第一封警告信。"}</p>`}
 
 /* ---------- 對照表管理 ---------- */
 const TYPES={pos:"POS",tenant_link:"專櫃線路",uplink:"上行",lag:"聚合",other:"其他",virtual:"虛擬（忽略）"};
