@@ -184,7 +184,7 @@ function nodeInfo(nid,n){
   if(p.kind!=="interface"){const ok=p.status==="up";ok?ho++:hb++;chips.push(`<i class="${ok?"ok":"bad"}">${esc(p.description)}${ok?"":" 異常"}</i>`);continue}
   const m=(mp.ports||{})[k]||{},st=pstat(nid,k,p,m);if(!st)continue;
   if(st==="bad"||st==="late")bad++;if(st!=="ok")non++;
-  ports.push({k,p,m,st,hay:[nid,meta.idf,meta.floor,m.store,m.pos_no,m.port_no,p.port_no,p.description].join(" ").toLowerCase()})}
+  ports.push({k,p,m,st,hay:[nid,meta.idf,meta.floor,m.store,tenant(p.description),m.pos_no,m.port_no,p.port_no,p.description].join(" ").toLowerCase()})}
  return{meta,ports,chips,bad,non,hb,ho}}
 const J=(num,st,h,g)=>`<b class="j ${st||"n"}${h?" hit":""}${g?" g":""}"><s>${num}</s><i></i></b>`;
 function faceplate(I,hit){
@@ -203,7 +203,7 @@ function faceplate(I,hit){
 function tiles(I){
  return I.ports.slice().sort((a,b)=>(a.st==="ok")-(b.st==="ok")||nat(a.m.port_no||a.p.port_no||a.k,b.m.port_no||b.p.port_no||b.k)).map(({k,p,m,st})=>{
   const sub=[m.pos_no?"POS "+m.pos_no:"",m.port_no||p.port_no].filter(Boolean).join("　");
-  return`<div class="t ${st}" title="${esc(p.description+"\nifIndex "+k)}"><b>${esc(m.store||p.description)}</b><small>${esc(sub||"ifIndex "+k)}</small>${st==="ok"?"":`<em>${LBL[st]}　${ago(p.status_since)}</em>`}</div>`}).join("")}
+  return`<div class="t ${st}" title="${esc(p.description+"\nifIndex "+k)}"><b>${esc(m.store||tenant(p.description)||p.description)}</b><small>${esc(sub||"ifIndex "+k)}</small>${st==="ok"?"":`<em>${LBL[st]}　${ago(p.status_since)}</em>`}</div>`}).join("")}
 function renderMon(){
  const q=S.q.trim().toLowerCase(),cnt={bad:0,late:0,exp:0,mnt:0,unk:0,ok:0},cards=[];let unas=0;
  if(S.dev&&!S.nodes[S.dev])S.dev=null;
@@ -221,7 +221,7 @@ function renderMon(){
  $("#sum").innerHTML=["bad","late","exp","mnt","unk","ok"].map(k=>`<span class="${k}"><strong>${cnt[k]}</strong>${LBL[k]}</span>`).join("");
  const grid=$("#grid");
  if(S.dev){const n=S.nodes[S.dev],I=nodeInfo(S.dev,n),al=I.bad+I.hb;grid.className="";
-  grid.innerHTML=`<div class="bar"><button id="bk">← 返回總覽</button><b>${esc(S.dev)}</b><span class="mu">${esc(n.ip)}　${esc([I.meta.floor,I.meta.idf].filter(Boolean).join(" / "))}　最後來信 ${ago(n.last_snapshot_time)}前</span></div>
+  grid.innerHTML=`<div class="bar"><button id="bk">← 返回總覽</button><b>${esc(S.dev)}</b><span class="mu">${esc([I.meta.floor,I.meta.idf].filter(Boolean).join(" / "))}　最後來信 ${ago(n.last_snapshot_time)}前</span></div>
   <section class="nc ${al?"alert":""}"><div class="dv" style="border:0;padding:0;background:none">${faceplate(I,new Set())}</div>${I.chips.length?`<div class="ch">${I.chips.join("")}</div>`:""}<div class="tg">${tiles(I)}</div></section>`;return}
  cards.sort((a,b)=>b[0]-a[0]);grid.className="ov";
  grid.innerHTML=cards.map(c=>c[1]).join("")||`<p class="mu">${Object.keys(S.nodes).length?"沒有符合條件的設備。":"尚無資料，等待收信程式寫入第一封警告信。"}</p>`}
@@ -265,10 +265,11 @@ view.addEventListener("change",async e=>{
 /* ---------- 事件紀錄 ---------- */
 async function loadEvents(){view.innerHTML='<p class="mu">讀取中…</p>';
  try{const s=await getDocs(query(collection(db,"events"),orderBy("time","desc"),limit(100)));S.evs=s.docs.map(d=>d.data())}catch(e){S.evs=null;toast("讀取失敗："+e.code)}renderEvt()}
+const tenant=d=>{const m=String(d||"").match(/(?:^|[\s(])((?:B\d{1,2}|\d{1,3}F)\.[^\s,;)]+)/i);return m?m[1]:""}; // 例：to 4F.Delvaux → 4F.Delvaux
 const SEV={alarm:["bad","異常"],overdue:["late","逾時未恢復"],expected:["exp","預期離線"],maintenance:["mnt","維護中"],recovery:["ok","恢復"]};
 function renderEvt(){
  view.innerHTML=`<div class="bar"><button id="rf">重新整理</button><span class="mu">最近 100 筆</span></div><div class="tw"><table><thead><tr><th>時間</th><th>狀態</th><th>Switch</th><th>店櫃</th><th>POS</th><th>Port</th><th>描述</th></tr></thead><tbody>
- ${(S.evs||[]).map(e=>{const[c,l]=SEV[e.severity]||["unk",e.severity];return`<tr><td>${esc(e.time.slice(5,16).replace("T"," "))}</td><td><span class="sv ${c}">${l}</span></td><td>${esc(e.node)}</td><td>${esc(e.store)}</td><td>${esc(e.pos_no)}</td><td>${esc(e.port_no)}</td><td>${esc(e.description)}</td></tr>`}).join("")||'<tr><td colspan="7" class="mu">目前沒有事件。</td></tr>'}</tbody></table></div>`;
+ ${(S.evs||[]).map(e=>{const[c,l]=SEV[e.severity]||["unk",e.severity];return`<tr><td>${esc(e.time.slice(5,16).replace("T"," "))}</td><td><span class="sv ${c}">${l}</span></td><td>${esc(e.node)}</td><td>${esc(e.store||tenant(e.description))}</td><td>${esc(e.pos_no)}</td><td>${esc(e.port_no)}</td><td>${esc(e.description)}</td></tr>`}).join("")||'<tr><td colspan="7" class="mu">目前沒有事件。</td></tr>'}</tbody></table></div>`;
  $("#rf").onclick=loadEvents}
 
 /* ---------- 分頁與渲染 ---------- */
