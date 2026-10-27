@@ -2229,10 +2229,7 @@ async function initAuth() {
     document.getElementById('login-overlay').style.display = 'none';
     return;
   }
-  // 提示：若 Firestore 有密碼則不顯示預設密碼提示
-  const hint = document.getElementById('login-setup-hint');
-  hint.textContent = '請輸入管理密碼登入，預設密碼：taipei101';
-  hint.style.color = '#aaa';
+  // 登入畫面不顯示任何密碼提示
 }
 
 window.doLogin = async function() {
